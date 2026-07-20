@@ -1,0 +1,114 @@
+﻿@{
+    ViewData["Title"] = "Home";
+    var categories = ViewBag.Categories as List<RestaurantERP.Domain.Entities.Category> ?? new();
+    var featured = ViewBag.Featured as List<RestaurantERP.Domain.Entities.MenuItem> ?? new();
+}
+
+<!-- Hero Section -->
+<section class="hero d-flex align-items-center text-white">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="mb-3">@Html.Raw(AppContent.Get("home.hero.title"))</h1>
+                <p class="lead mb-4 opacity-75">@AppContent.Get("home.hero.subtitle")</p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="@AppContent.Get("home.hero.cta_primary_url", "/Menu")" class="btn btn-primary btn-lg px-4">
+                        <i class="bi bi-grid me-2"></i>@AppContent.Get("home.hero.cta_primary")
+                    </a>
+                    <a href="@AppContent.Get("home.hero.cta_secondary_url", "/Home/About")" class="btn btn-outline-light btn-lg px-4">@AppContent.Get("home.hero.cta_secondary")</a>
+                </div>
+            </div>
+            <div class="col-lg-6 d-none d-lg-block text-center">
+                <img src="@AppContent.Get("home.hero.image")" 
+                     alt="@AppContent.Get("site.name")" class="img-fluid rounded-4 shadow-lg" style="max-height: 400px; object-fit: cover;">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row g-4 text-center">
+            @for (var i = 1; i <= 3; i++)
+            {
+                <div class="col-md-4">
+                    <div class="p-4">
+                        <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                            <i class="bi @AppContent.Get($"home.features.{i}.icon") text-primary fs-2"></i>
+                        </div>
+                        <h5 class="fw-bold">@AppContent.Get($"home.features.{i}.title")</h5>
+                        <p class="text-muted mb-0">@AppContent.Get($"home.features.{i}.body")</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Categories Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">@AppContent.Get("home.categories.title")</h2>
+            <p class="text-muted mt-4">@AppContent.Get("home.categories.subtitle")</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            @foreach (var cat in categories.Take(6))
+            {
+                <div class="col-6 col-md-4 col-lg-2">
+                    <a href="/Menu?category=@cat.Id" class="text-decoration-none">
+                        <div class="card text-center p-4 h-100">
+                            <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 60px; height: 60px;">
+                                <i class="bi bi-egg-fried text-primary fs-4"></i>
+                            </div>
+                            <h6 class="fw-bold text-dark mb-0">@cat.Name</h6>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Featured Dishes Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h2 class="section-title">@AppContent.Get("home.featured.title")</h2>
+                <p class="text-muted mt-4 mb-0">@AppContent.Get("home.featured.subtitle")</p>
+            </div>
+            <a href="/Menu" class="btn btn-outline-primary d-none d-md-inline-block">View All Menu</a>
+        </div>
+        <div class="row g-4">
+            @foreach (var item in featured.Take(8))
+            {
+                <partial name="_MenuProductCard" model="item" />
+            }
+        </div>
+        <div class="text-center mt-4 d-md-none">
+            <a href="/Menu" class="btn btn-outline-primary">View All Menu</a>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5 bg-primary text-white">
+    <div class="container text-center">
+        <h2 class="fw-bold mb-3">@AppContent.Get("home.cta.title")</h2>
+        <p class="lead mb-4 opacity-75">@AppContent.Get("home.cta.subtitle")</p>
+        @if (!User.Identity?.IsAuthenticated ?? true)
+        {
+            <a href="/Account/Register" class="btn btn-light btn-lg px-5">
+                <i class="bi bi-person-plus me-2"></i>Create Account
+            </a>
+        }
+        else
+        {
+            <a href="/Menu" class="btn btn-light btn-lg px-5">
+                <i class="bi bi-cart-plus me-2"></i>Order Now
+            </a>
+        }
+    </div>
+</section>

@@ -1,0 +1,359 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject IWhatsAppIntegrationService WhatsApp
+@inject SignInManager<RestaurantERP.Domain.Entities.ApplicationUser> SignInManager
+@inject UserManager<RestaurantERP.Domain.Entities.ApplicationUser> UserManager
+@{
+    var theme = ViewBag.SiteTheme as ThemeSetting;
+    var mainNav = ViewBag.MainNav as List<NavigationMenuItem> ?? new();
+    var footerNav = ViewBag.FooterNav as List<NavigationMenuItem> ?? new();
+    var siteName = AppContent.Get("site.name", "Restaurant ERP");
+    var logoIcon = AppContent.Get("site.logo_icon", "bi-fire");
+    var primary = theme?.PrimaryColor ?? "#E63946";
+    var secondary = theme?.SecondaryColor ?? "#1D3557";
+    var accent = theme?.AccentColor ?? "#F4A261";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="@AppContent.Get("seo.default_description")" />
+    <title>@ViewData["Title"] - @AppContent.Get("seo.title_suffix", siteName)</title>
+    @if (!string.IsNullOrEmpty(theme?.FaviconUrl))
+    {
+        <link rel="icon" href="@theme.FaviconUrl" />
+    }
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="~/css/whatsapp-widget.css" asp-append-version="true" rel="stylesheet" />
+    <style>
+        :root {
+            --primary: @primary;
+            --primary-dark: @primary;
+            --secondary: @secondary;
+            --accent: @accent;
+            --light: #F8F9FA;
+            --dark: #212529;
+        }        * { font-family: 'Poppins', sans-serif; }
+        
+        /* Navbar */
+        .navbar { background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .navbar-brand { font-weight: 700; color: var(--primary) !important; font-size: 1.5rem; }
+        .nav-link { font-weight: 500; color: var(--dark) !important; margin: 0 0.5rem; }
+        .nav-link:hover { color: var(--primary) !important; }
+        .navbar .btn-primary { background: var(--primary); border: none; padding: 0.5rem 1.5rem; }
+        .navbar .btn-primary:hover { background: var(--primary-dark); }
+        
+        /* Buttons */
+        .btn-primary { background: var(--primary); border-color: var(--primary); }
+        .btn-primary:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+        .btn-outline-primary { color: var(--primary); border-color: var(--primary); }
+        .btn-outline-primary:hover { background: var(--primary); border-color: var(--primary); }
+        .text-primary { color: var(--primary) !important; }
+        .bg-primary { background: var(--primary) !important; }
+        
+        /* Hero Section */
+        .hero { background: linear-gradient(135deg, var(--secondary) 0%, #2d4a6f 100%); min-height: 500px; }
+        .hero h1 { font-size: 3rem; font-weight: 700; }
+        
+        /* Cards */
+        .card { border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); transition: transform 0.3s, box-shadow 0.3s; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
+        
+        /* Menu Item Card */
+        .menu-card img { height: 200px; object-fit: cover; border-radius: 12px 12px 0 0; }
+        .menu-card .card-body { padding: 1.25rem; }
+        
+        /* Veg/Non-veg badges */
+        .veg-badge { width: 18px; height: 18px; border: 2px solid #22c55e; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; }
+        .veg-badge::before { content: ''; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; }
+        .nonveg-badge { width: 18px; height: 18px; border: 2px solid #ef4444; display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; }
+        .nonveg-badge::before { content: ''; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; }
+        
+        /* Section styling */
+        .section-title { font-weight: 700; position: relative; display: inline-block; }
+        .section-title::after { content: ''; position: absolute; bottom: -8px; left: 0; width: 60px; height: 4px; background: var(--primary); border-radius: 2px; }
+        
+        /* Footer */
+        footer { background: var(--secondary); }
+        footer a { color: rgba(255,255,255,0.7); text-decoration: none; }
+        footer a:hover { color: #fff; }
+        
+        /* Floating Cart */
+        .cart-floating { position: fixed; bottom: 30px; right: 30px; z-index: 1000; }
+        .cart-floating .btn { padding: 1rem 1.5rem; border-radius: 50px; box-shadow: 0 4px 20px rgba(230, 57, 70, 0.4); }
+        
+        /* Blinkit-style cart controls */
+        .blinkit-add-btn {
+            background: #fff;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 0.8rem;
+            padding: 0.35rem 1.25rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .blinkit-add-btn:hover { background: #fff5f5; color: var(--primary-dark); border-color: var(--primary-dark); }
+        .blinkit-qty-stepper {
+            display: flex;
+            align-items: center;
+            background: var(--primary);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(230,57,70,0.35);
+        }
+        .blinkit-qty-stepper .btn {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.1rem;
+            padding: 0.25rem 0.65rem;
+            line-height: 1;
+        }
+        .blinkit-qty-stepper .btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        .blinkit-qty-stepper .qty-value {
+            color: #fff;
+            font-weight: 700;
+            min-width: 1.5rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .menu-card { overflow: hidden; }
+
+        /* Mobile floating cart bar (Blinkit style) */
+        #floatingCartBar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            background: var(--primary);
+            color: #fff;
+            padding: 0.85rem 1.25rem;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+        }
+        #floatingCartBar a { color: #fff; text-decoration: none; }
+        
+        /* Responsive */
+        @@media (max-width: 768px) {
+            .hero h1 { font-size: 2rem; }
+            .hero { min-height: 400px; }
+        }
+    </style>
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+@await Html.PartialAsync("_NotificationBar")
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                @if (!string.IsNullOrEmpty(theme?.LogoUrl))
+                {
+                    <img src="@theme.LogoUrl" alt="@siteName" height="32" class="me-2" />
+                }
+                else
+                {
+                    <i class="bi @logoIcon me-2"></i>
+                }
+                @siteName
+            </a>            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    @foreach (var navItem in mainNav)
+                    {
+                        var isActive = navItem.Url == "/" 
+                            ? ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Index"
+                            : Context.Request.Path.Value?.StartsWith(navItem.Url ?? "", StringComparison.OrdinalIgnoreCase) == true;
+                        <li class="nav-item">
+                            <a class="nav-link @(isActive ? "active text-primary" : "")" href="@navItem.Url" @(navItem.OpenInNewTab ? "target=\"_blank\" rel=\"noopener\"" : "")>
+                                @if (!string.IsNullOrEmpty(navItem.Icon)) { <i class="bi @navItem.Icon me-1"></i> }
+                                @navItem.Label
+                            </a>
+                        </li>
+                    }
+                </ul>                <ul class="navbar-nav">
+                    @if (SignInManager.IsSignedIn(User))
+                    {
+                        var user = await UserManager.GetUserAsync(User);
+                        var roles = user != null ? await UserManager.GetRolesAsync(user) : new List<string>();
+                        var isStaff = roles.Contains("Admin") || roles.Contains("SuperAdmin");
+                        var waSupportUrl = !isStaff && WhatsApp.IsEnabled()
+                            ? WhatsApp.GetSupportChatUrl(user?.FullName, user?.Email, siteName)
+                            : null;
+                        @if (!isStaff)
+                        {
+                        @if (!string.IsNullOrEmpty(waSupportUrl))
+                        {
+                        <li class="nav-item">
+                            <a class="nav-link text-success" href="@waSupportUrl" target="_blank" rel="noopener noreferrer" title="WhatsApp Support">
+                                <i class="bi bi-whatsapp"></i> Support
+                            </a>
+                        </li>
+                        }
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Cart">
+                                <i class="bi bi-cart3"></i> Cart
+                                <span class="badge bg-primary rounded-pill @(ViewBag.CartCount != null && (int)ViewBag.CartCount > 0 ? "" : "d-none")" id="navCartBadge">@(ViewBag.CartCount ?? 0)</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Orders">My Orders</a>
+                        </li>
+                        }
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
+                                @if (!string.IsNullOrEmpty(user?.AvatarUrl))
+                                {
+                                    <img src="@user.AvatarUrl" alt="@user.FullName" class="rounded-circle nav-avatar" />
+                                }
+                                else
+                                {
+                                    <i class="bi bi-person-circle"></i>
+                                }
+                                <span>@user?.FullName</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="/Profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                                @if (roles.Contains("Admin") || roles.Contains("SuperAdmin"))
+                                {
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="/Admin"><i class="bi bi-speedometer2 me-2"></i>Admin Panel</a></li>
+                                }
+                                @if (roles.Contains("SuperAdmin"))
+                                {
+                                    <li><a class="dropdown-item" href="/SuperAdmin"><i class="bi bi-shield-check me-2"></i>SuperAdmin</a></li>
+                                }
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form asp-controller="Account" asp-action="Logout" method="post">
+                                        <button type="submit" class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Logout</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link" href="/Account/Login">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-primary ms-2" href="/Account/Register">Sign Up</a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        @RenderBody()
+    </main>
+
+    <!-- Floating Cart Bar (mobile, Blinkit style) -->
+    @if (SignInManager.IsSignedIn(User))
+    {
+        var layoutUser = await UserManager.GetUserAsync(User);
+        var layoutRoles = layoutUser != null ? await UserManager.GetRolesAsync(layoutUser) : new List<string>();
+        var layoutIsStaff = layoutRoles.Contains("Admin") || layoutRoles.Contains("SuperAdmin");
+        if (!layoutIsStaff)
+        {
+        var showCart = ViewBag.CartCount != null && ViewBag.CartCount > 0;
+        <div id="floatingCartBar" class="d-md-none @(showCart ? "" : "d-none")">
+            <a href="/Cart" class="d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-cart3 me-2"></i><span id="floatingCartCount">@(ViewBag.CartCount ?? 0)</span> items</span>
+                <span class="fw-bold">View Cart <span id="floatingCartTotal">₹@(ViewBag.CartTotal?.ToString("N0") ?? "0")</span> <i class="bi bi-chevron-right"></i></span>
+            </a>
+        </div>
+        <div id="desktopCartWrapper" class="cart-floating @(showCart ? "d-none d-md-block" : "d-none")">
+            <a href="/Cart" class="btn btn-primary" id="desktopCartBtn">
+                <i class="bi bi-cart3 me-2"></i><span id="desktopCartCount">@(ViewBag.CartCount ?? 0)</span> items - <span id="desktopCartTotal">₹@(ViewBag.CartTotal?.ToString("N0") ?? "0")</span>
+            </a>
+        </div>
+        }
+    }
+
+    @await Html.PartialAsync("_WhatsAppWidget")
+
+    <!-- Footer -->
+    <footer class="text-white py-5 mt-5">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <h5 class="fw-bold mb-3">
+                        @if (!string.IsNullOrEmpty(theme?.LogoUrl))
+                        {
+                            <img src="@theme.LogoUrl" alt="@siteName" height="28" class="me-2" />
+                        }
+                        else
+                        {
+                            <i class="bi @logoIcon me-2"></i>
+                        }
+                        @siteName
+                    </h5>
+                    <p class="text-white-50">@AppContent.Get("footer.tagline")</p>
+                    <div class="d-flex gap-3 mt-3">
+                        @{
+                            var fb = AppContent.Get("social.facebook");
+                            var ig = AppContent.Get("social.instagram");
+                            var tw = AppContent.Get("social.twitter");
+                        }
+                        @if (!string.IsNullOrEmpty(fb) && fb != "#") { <a href="@fb" class="fs-5" target="_blank" rel="noopener"><i class="bi bi-facebook"></i></a> }
+                        @if (!string.IsNullOrEmpty(ig) && ig != "#") { <a href="@ig" class="fs-5" target="_blank" rel="noopener"><i class="bi bi-instagram"></i></a> }
+                        @if (!string.IsNullOrEmpty(tw) && tw != "#") { <a href="@tw" class="fs-5" target="_blank" rel="noopener"><i class="bi bi-twitter-x"></i></a> }
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <h6 class="fw-bold mb-3">Quick Links</h6>
+                    <ul class="list-unstyled">
+                        @foreach (var link in footerNav)
+                        {
+                            <li class="mb-2"><a href="@link.Url" @(link.OpenInNewTab ? "target=\"_blank\" rel=\"noopener\"" : "")>@link.Label</a></li>
+                        }
+                    </ul>
+                </div>
+                <div class="col-lg-3 col-md-4">
+                    <h6 class="fw-bold mb-3">Opening Hours</h6>
+                    <ul class="list-unstyled text-white-50">
+                        <li class="mb-2">@AppContent.Get("footer.hours.weekday")</li>
+                        <li class="mb-2">@AppContent.Get("footer.hours.saturday")</li>
+                        <li class="mb-2">@AppContent.Get("footer.hours.sunday")</li>
+                    </ul>
+                </div>
+                <div class="col-lg-3 col-md-4">
+                    <h6 class="fw-bold mb-3">Contact Us</h6>
+                    <ul class="list-unstyled text-white-50">
+                        <li class="mb-2"><i class="bi bi-geo-alt me-2"></i>@AppContent.Get("footer.address")</li>
+                        <li class="mb-2"><i class="bi bi-telephone me-2"></i>@AppContent.Get("footer.phone")</li>
+                        <li class="mb-2"><i class="bi bi-envelope me-2"></i>@AppContent.Get("footer.email")</li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-4 opacity-25">
+            <div class="text-center text-white-50">
+                <small>&copy; @DateTime.Now.Year @siteName. @AppContent.Get("footer.copyright")</small>
+            </div>        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/notification-bar.js" asp-append-version="true"></script>
+    @if (SignInManager.IsSignedIn(User))
+    {
+        var scriptUser = await UserManager.GetUserAsync(User);
+        var scriptRoles = scriptUser != null ? await UserManager.GetRolesAsync(scriptUser) : new List<string>();
+        var scriptIsStaff = scriptRoles.Contains("Admin") || scriptRoles.Contains("SuperAdmin");
+        if (!scriptIsStaff)
+        {
+            <script src="~/js/blinkit-cart.js"></script>
+        }
+    }
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

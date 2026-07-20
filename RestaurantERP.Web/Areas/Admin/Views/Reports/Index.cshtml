@@ -1,0 +1,403 @@
+@{
+    ViewData["Title"] = "Reports";
+    var tab = ViewBag.Tab as string ?? "sales";
+    var from = ViewBag.From as string ?? "";
+    var to = ViewBag.To as string ?? "";
+    var totalSales = (decimal)ViewBag.TotalSales;
+    var orderCount = (int)ViewBag.OrderCount;
+    var avgOrder = (decimal)ViewBag.AvgOrderValue;
+    var totalTax = (decimal)ViewBag.TotalTax;
+    var totalDiscount = (decimal)ViewBag.TotalDiscount;
+    var deliveryFees = (decimal)ViewBag.DeliveryFees;
+    var chartLabels = ViewBag.ChartLabels as List<string> ?? new();
+    var chartData = ViewBag.ChartData as List<decimal> ?? new();
+    var billCount = (int)ViewBag.BillCount;
+    var billTotal = (decimal)ViewBag.BillTotal;
+    var posBillCount = (int)ViewBag.PosBillCount;
+    var onlineBillCount = (int)ViewBag.OnlineBillCount;
+    var lowStockItems = ViewBag.LowStockItems as List<RestaurantERP.Domain.Entities.Ingredient> ?? new();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h5 class="fw-bold mb-1">Reports & Analytics</h5>
+        <p class="text-muted small mb-0">Sales, orders, menu performance, and payment insights</p>
+    </div>
+</div>
+
+<form method="get" class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-sm-4 col-md-3">
+                <label class="form-label small text-muted">From</label>
+                <input type="date" name="from" class="form-control" value="@from" />
+            </div>
+            <div class="col-sm-4 col-md-3">
+                <label class="form-label small text-muted">To</label>
+                <input type="date" name="to" class="form-control" value="@to" />
+            </div>
+            <div class="col-sm-4 col-md-3">
+                <input type="hidden" name="tab" value="@tab" />
+                <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel me-1"></i> Apply Filter</button>
+            </div>
+            <div class="col-md-3">
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="/Admin/Reports?from=@DateTime.UtcNow.Date.AddDays(-6).ToString("yyyy-MM-dd")&to=@DateTime.UtcNow.Date.ToString("yyyy-MM-dd")&tab=@tab" class="btn btn-sm btn-outline-secondary">7 days</a>
+                    <a href="/Admin/Reports?from=@DateTime.UtcNow.Date.AddDays(-29).ToString("yyyy-MM-dd")&to=@DateTime.UtcNow.Date.ToString("yyyy-MM-dd")&tab=@tab" class="btn btn-sm btn-outline-secondary">30 days</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <p class="text-muted small mb-0">Total Sales</p>
+                <h4 class="fw-bold mb-0">₹@totalSales.ToString("N0")</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <p class="text-muted small mb-0">Orders</p>
+                <h4 class="fw-bold mb-0">@orderCount</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <p class="text-muted small mb-0">Avg Order Value</p>
+                <h4 class="fw-bold mb-0">₹@avgOrder.ToString("N0")</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <p class="text-muted small mb-0">Bills Generated</p>
+                <h4 class="fw-bold mb-0">@billCount <span class="text-muted fs-6 fw-normal">(₹@billTotal.ToString("N0"))</span></h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item"><a class="nav-link @(tab == "sales" ? "active" : "")" href="/Admin/Reports?tab=sales&from=@from&to=@to">Sales</a></li>
+    <li class="nav-item"><a class="nav-link @(tab == "orders" ? "active" : "")" href="/Admin/Reports?tab=orders&from=@from&to=@to">Orders</a></li>
+    <li class="nav-item"><a class="nav-link @(tab == "menu" ? "active" : "")" href="/Admin/Reports?tab=menu&from=@from&to=@to">Menu</a></li>
+    <li class="nav-item"><a class="nav-link @(tab == "payments" ? "active" : "")" href="/Admin/Reports?tab=payments&from=@from&to=@to">Payments</a></li>
+</ul>
+
+@if (tab == "sales")
+{
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h6 class="fw-bold">Sales Trend</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="salesChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-white border-0 pt-4 pb-0">
+                    <h6 class="fw-bold">Revenue Breakdown</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm mb-0">
+                        <tbody>
+                            <tr><td>Subtotal (incl. items)</td><td class="text-end fw-medium">₹@totalSales.ToString("N0")</td></tr>
+                            <tr><td>Tax Collected</td><td class="text-end">₹@totalTax.ToString("N0")</td></tr>
+                            <tr><td>Discounts</td><td class="text-end text-danger">-₹@totalDiscount.ToString("N0")</td></tr>
+                            <tr><td>Delivery Fees</td><td class="text-end">₹@deliveryFees.ToString("N0")</td></tr>
+                            <tr class="table-light"><td class="fw-bold">Net Sales</td><td class="text-end fw-bold">₹@totalSales.ToString("N0")</td></tr>
+                        </tbody>
+                    </table>
+                    <hr />
+                    <p class="small text-muted mb-1">Bills by source</p>
+                    <div class="d-flex justify-content-between small">
+                        <span>POS (offline)</span><span class="fw-medium">@posBillCount bills</span>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span>Online</span><span class="fw-medium">@onlineBillCount bills</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (tab == "orders")
+{
+    var byType = ViewBag.OrdersByType as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var byStatus = ViewBag.OrdersByStatus as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var bySource = ViewBag.OrdersBySource as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-white"><h6 class="mb-0 fw-bold">By Order Type</h6></div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Type</th><th>Count</th><th class="text-end">Revenue</th></tr></thead>
+                        <tbody>
+                            @foreach (var row in byType)
+                            {
+                                <tr>
+                                    <td><span class="badge bg-light text-dark">@row.Label</span></td>
+                                    <td>@row.Count</td>
+                                    <td class="text-end fw-medium">₹@((decimal)row.Total).ToString("N0")</td>
+                                </tr>
+                            }
+                            @if (!byType.Any()) { <tr><td colspan="3" class="text-muted text-center py-4">No orders in range</td></tr> }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-white"><h6 class="mb-0 fw-bold">By Status</h6></div>
+                <div class="card-body">
+                    <canvas id="statusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-white"><h6 class="mb-0 fw-bold">By Source</h6></div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Source</th><th>Count</th><th class="text-end">Revenue</th></tr></thead>
+                        <tbody>
+                            @foreach (var row in bySource)
+                            {
+                                <tr>
+                                    <td>@row.Label</td>
+                                    <td>@row.Count</td>
+                                    <td class="text-end fw-medium">₹@((decimal)row.Total).ToString("N0")</td>
+                                </tr>
+                            }
+                            @if (!bySource.Any()) { <tr><td colspan="3" class="text-muted text-center py-4">No data</td></tr> }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else if (tab == "menu")
+{
+    var topItems = ViewBag.TopMenuItems as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">Top Selling Items</h6>
+                    <span class="badge bg-light text-dark">Top 10</span>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>#</th><th>Item</th><th>Qty Sold</th><th class="text-end">Revenue</th></tr>
+                        </thead>
+                        <tbody>
+                            @{ var rank = 1; }
+                            @foreach (var item in topItems)
+                            {
+                                <tr>
+                                    <td class="text-muted">@rank</td>
+                                    <td class="fw-medium">@item.Name</td>
+                                    <td>@item.Quantity</td>
+                                    <td class="text-end fw-bold">₹@((decimal)item.Revenue).ToString("N0")</td>
+                                </tr>
+                                rank++;
+                            }
+                            @if (!topItems.Any()) { <tr><td colspan="4" class="text-muted text-center py-4">No menu sales in this period</td></tr> }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header bg-white"><h6 class="mb-0 fw-bold">Revenue by Item</h6></div>
+                <div class="card-body">
+                    <canvas id="menuChart" height="260"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (lowStockItems.Any())
+    {
+        <div class="card mt-4 border-warning">
+            <div class="card-header bg-warning bg-opacity-10">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle me-1"></i> Low Stock Alert</h6>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light"><tr><th>Ingredient</th><th>Current</th><th>Threshold</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var ing in lowStockItems)
+                        {
+                            <tr>
+                                <td>@ing.Name</td>
+                                <td class="text-danger fw-medium">@ing.CurrentStock @ing.Unit</td>
+                                <td>@ing.LowStockThreshold @ing.Unit</td>
+                                <td><a href="/Admin/Inventory?tab=ingredients" class="btn btn-sm btn-outline-primary">Manage</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+else if (tab == "payments")
+{
+    var byMethod = ViewBag.PaymentsByMethod as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var byPayStatus = ViewBag.PaymentsByStatus as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-white"><h6 class="mb-0 fw-bold">Payment Methods</h6></div>
+                <div class="card-body">
+                    <canvas id="paymentChart" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-white"><h6 class="mb-0 fw-bold">Payment Status</h6></div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Status</th><th>Orders</th></tr></thead>
+                        <tbody>
+                            @foreach (var row in byPayStatus)
+                            {
+                                var badge = row.Label.ToString() switch {
+                                    "Paid" => "success",
+                                    "Pending" => "warning",
+                                    "Failed" => "danger",
+                                    _ => "secondary"
+                                };
+                                <tr>
+                                    <td><span class="badge bg-@badge">@row.Label</span></td>
+                                    <td class="fw-medium">@row.Count</td>
+                                </tr>
+                            }
+                            @if (!byPayStatus.Any()) { <tr><td colspan="2" class="text-muted text-center py-4">No data</td></tr> }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white"><h6 class="mb-0 fw-bold">Method Breakdown</h6></div>
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Method</th><th>Orders</th><th class="text-end">Amount</th></tr></thead>
+                        <tbody>
+                            @foreach (var row in byMethod)
+                            {
+                                <tr>
+                                    <td>@row.Label</td>
+                                    <td>@row.Count</td>
+                                    <td class="text-end fw-bold">₹@((decimal)row.Total).ToString("N0")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+<script>
+    const chartLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartLabels));
+    const chartData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartData));
+
+    @if (tab == "sales")
+    {
+        <text>
+        new Chart(document.getElementById('salesChart'), {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Sales (₹)',
+                    data: chartData,
+                    backgroundColor: 'rgba(230, 57, 70, 0.7)',
+                    borderColor: '#E63946',
+                    borderWidth: 1
+                }]
+            },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+        </text>
+    }
+
+    @if (tab == "orders")
+    {
+        var statusData = ViewBag.OrdersByStatus as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+        var statusLabels = statusData.Select(s => (string)s.Label).ToList();
+        var statusCounts = statusData.Select(s => (int)s.Count).ToList();
+        <text>
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(statusLabels)),
+                datasets: [{ data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(statusCounts)), backgroundColor: ['#E63946','#457B9D','#F4A261','#2A9D8F','#E9C46A','#264653','#adb5bd'] }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+        </text>
+    }
+
+    @if (tab == "menu")
+    {
+        var menuItems = ViewBag.TopMenuItems as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+        var menuLabels = menuItems.Select(i => (string)i.Name).ToList();
+        var menuRevenue = menuItems.Select(i => (decimal)i.Revenue).ToList();
+        <text>
+        new Chart(document.getElementById('menuChart'), {
+            type: 'bar',
+            data: {
+                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(menuLabels)),
+                datasets: [{ label: 'Revenue', data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(menuRevenue)), backgroundColor: '#457B9D' }]
+            },
+            options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } } }
+        });
+        </text>
+    }
+
+    @if (tab == "payments")
+    {
+        var payMethods = ViewBag.PaymentsByMethod as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+        var payLabels = payMethods.Select(p => (string)p.Label).ToList();
+        var payTotals = payMethods.Select(p => (decimal)p.Total).ToList();
+        <text>
+        new Chart(document.getElementById('paymentChart'), {
+            type: 'pie',
+            data: {
+                labels: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(payLabels)),
+                datasets: [{ data: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(payTotals)), backgroundColor: ['#E63946','#2A9D8F','#457B9D'] }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+        </text>
+    }
+</script>
+}

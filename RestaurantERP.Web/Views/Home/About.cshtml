@@ -1,0 +1,86 @@
+@{
+    ViewData["Title"] = "About Us";
+}
+
+<!-- Hero Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <h1 class="fw-bold mb-4">@AppContent.Get("about.story.title")</h1>
+                <p class="lead text-muted">@AppContent.Get("about.story.lead")</p>
+                <p class="text-muted">@AppContent.Get("about.story.body1")</p>
+                <p class="text-muted">@AppContent.Get("about.story.body2")</p>
+            </div>
+            <div class="col-lg-6">
+                <img src="@AppContent.Get("about.story.image")" 
+                     alt="@AppContent.Get("about.story.title")" class="img-fluid rounded-4 shadow">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Values Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">@AppContent.Get("about.values.title")</h2>
+            <p class="text-muted mt-4">@AppContent.Get("about.values.subtitle")</p>
+        </div>
+        <div class="row g-4">
+            @for (var i = 1; i <= 3; i++)
+            {
+                <div class="col-md-4">
+                    <div class="card h-100 text-center p-4">
+                        <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 80px; height: 80px;">
+                            <i class="bi @AppContent.Get($"about.values.{i}.icon") text-primary fs-2"></i>
+                        </div>
+                        <h5 class="fw-bold">@AppContent.Get($"about.values.{i}.title")</h5>
+                        <p class="text-muted mb-0">@AppContent.Get($"about.values.{i}.body")</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Team Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="section-title">@AppContent.Get("about.team.title")</h2>
+            <p class="text-muted mt-4">@AppContent.Get("about.team.subtitle")</p>
+        </div>
+        <div class="row g-4 justify-content-center">
+            @for (var i = 1; i <= 3; i++)
+            {
+                <div class="col-md-4 col-lg-3">
+                    <div class="card text-center p-4">
+                        <img src="@AppContent.Get($"about.team.{i}.image")" 
+                             class="rounded-circle mx-auto mb-3" style="width: 120px; height: 120px; object-fit: cover;" alt="@AppContent.Get($"about.team.{i}.name")">
+                        <h6 class="fw-bold mb-1">@AppContent.Get($"about.team.{i}.name")</h6>
+                        <small class="text-muted">@AppContent.Get($"about.team.{i}.role")</small>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section class="py-5 bg-primary text-white">
+    <div class="container">
+        <div class="row g-4 text-center">
+            @{
+                var stats = new[] { "years", "customers", "items", "chefs" };
+            }
+            @foreach (var stat in stats)
+            {
+                <div class="col-6 col-md-3">
+                    <h2 class="fw-bold mb-0">@AppContent.Get($"about.stats.{stat}")</h2>
+                    <p class="opacity-75 mb-0">@AppContent.Get($"about.stats.{stat}_label")</p>
+                </div>
+            }
+        </div>
+    </div>
+</section>

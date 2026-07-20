@@ -1,0 +1,231 @@
+@{
+    ViewData["Title"] = "Checkout";
+    var tables = ViewBag.Tables as List<RestaurantERP.Domain.Entities.RestaurantTable> ?? new();
+    var user = ViewBag.User as RestaurantERP.Domain.Entities.ApplicationUser;
+    var deliveryConfig = ViewBag.DeliveryConfig as RestaurantERP.Application.Common.DeliveryConfig;
+}
+
+<div class="container py-4" style="max-width: 720px;">
+    <div class="d-flex align-items-center mb-4">
+        <a href="/Cart" class="btn btn-light rounded-circle me-2"><i class="bi bi-arrow-left"></i></a>
+        <h1 class="h5 fw-bold mb-0">Checkout</h1>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger d-none">@TempData["Error"]</div>
+    }
+
+    <form asp-action="PlaceOrder" method="post" id="checkoutForm">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Order Type</h6>
+                <div class="d-flex gap-2 flex-wrap">
+                    <input type="radio" class="btn-check" name="orderType" id="dineIn" value="DineIn">
+                    <label class="btn btn-outline-primary rounded-pill flex-grow-1" for="dineIn">Dine In</label>
+
+                    <input type="radio" class="btn-check" name="orderType" id="takeaway" value="Takeaway" checked>
+                    <label class="btn btn-outline-primary rounded-pill flex-grow-1" for="takeaway">Takeaway</label>
+
+                    <input type="radio" class="btn-check" name="orderType" id="delivery" value="Delivery">
+                    <label class="btn btn-outline-primary rounded-pill flex-grow-1" for="delivery">Delivery</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4" id="tableSection" style="display: none;">
+            <div class="card-body">
+                <h6 class="fw-bold mb-2">Select Table</h6>
+                <select name="tableId" class="form-select">
+                    <option value="">Select a table</option>
+                    @foreach (var table in tables)
+                    {
+                        <option value="@table.Id">@table.TableNumber - @table.Section.Name (@table.Capacity seats)</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="card mb-4" id="addressSection" style="display: none;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h6 class="fw-bold mb-1">Delivery Location & Address</h6>
+                        <small class="text-muted">We deliver within <strong>@deliveryConfig?.RadiusKm km</strong> of our restaurant.</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="useLocationBtn">
+                        <i class="bi bi-geo-alt-fill me-1"></i>Use My Location
+                    </button>
+                </div>
+
+                <div id="locationStatus" class="alert alert-info small py-2 d-none"></div>
+                <div id="deliveryZoneAlert" class="alert small py-2 d-none"></div>
+
+                <input type="hidden" name="latitude" id="latitude" />
+                <input type="hidden" name="longitude" id="longitude" />
+
+                <div class="mb-3">
+                    <label class="form-label">House / Flat / Street Address <span class="text-danger">*</span></label>
+                    <textarea name="address" id="address" class="form-control" rows="2" placeholder="House no., building, street">@user?.Address</textarea>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Landmark</label>
+                        <input type="text" name="landmark" id="landmark" class="form-control" placeholder="Near metro, mall, etc." />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">City <span class="text-danger">*</span></label>
+                        <input type="text" name="city" id="city" class="form-control" value="@user?.City" placeholder="City" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">PIN Code <span class="text-danger">*</span></label>
+                        <input type="text" name="pinCode" id="pinCode" class="form-control" value="@user?.PinCode" placeholder="110001" maxlength="6" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">GPS Coordinates</label>
+                        <input type="text" id="coordsDisplay" class="form-control bg-light" readonly placeholder="Click 'Use My Location'" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Payment Method</h6>
+                <div class="d-flex flex-column gap-2">
+                    <label class="d-flex align-items-center gap-3 p-3 border rounded-3 mb-0">
+                        <input type="radio" name="paymentMethod" value="Cash" class="form-check-input">
+                        <span>Cash on Delivery</span>
+                    </label>
+                    <label class="d-flex align-items-center gap-3 p-3 border rounded-3 mb-0">
+                        <input type="radio" name="paymentMethod" value="UPI" class="form-check-input" checked>
+                        <span>UPI</span>
+                    </label>
+                    <label class="d-flex align-items-center gap-3 p-3 border rounded-3 mb-0">
+                        <input type="radio" name="paymentMethod" value="Card" class="form-check-input">
+                        <span>Card</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-2">Special Instructions</h6>
+                <textarea name="notes" class="form-control" rows="2" placeholder="Any special requests?"></textarea>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 py-3 rounded-4 fw-semibold" id="placeOrderBtn">
+            Place Order
+        </button>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+    const radiusKm = @(deliveryConfig?.RadiusKm ?? 5);
+    let canDeliver = false;
+    let isDelivery = false;
+
+    function notify(msg, type, opts) {
+        if (window.RestaurantNotify) window.RestaurantNotify.show(msg, type, opts);
+    }
+
+    function setDeliveryZoneAlert(type, message) {
+        const el = document.getElementById('deliveryZoneAlert');
+        el.className = `alert alert-${type} small py-2`;
+        el.textContent = message;
+        el.classList.remove('d-none');
+    }
+
+    async function validateDelivery(lat, lng) {
+        const res = await fetch('/Orders/CheckDelivery', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ latitude: lat, longitude: lng })
+        });
+        const data = await res.json();
+        canDeliver = data.canDeliver;
+        if (data.canDeliver) {
+            setDeliveryZoneAlert('success', data.message);
+            notify(data.message || 'Delivery available to your location', 'success', { title: 'Delivery zone' });
+        } else {
+            setDeliveryZoneAlert('danger', data.message || 'Unable to deliver to your location.');
+            notify(data.message || 'Unable to deliver to your location.', 'error', { title: 'Out of delivery zone', duration: 6000 });
+        }
+        updatePlaceOrderBtn();
+    }
+
+    function updatePlaceOrderBtn() {
+        const btn = document.getElementById('placeOrderBtn');
+        if (isDelivery && !canDeliver) {
+            btn.disabled = true;
+            btn.textContent = 'Unable to Deliver — Out of Radius';
+        } else {
+            btn.disabled = false;
+            btn.textContent = 'Place Order';
+        }
+    }
+
+    function toggleSections() {
+        const type = document.querySelector('input[name="orderType"]:checked')?.value;
+        isDelivery = type === 'Delivery';
+        document.getElementById('tableSection').style.display = type === 'DineIn' ? 'block' : 'none';
+        document.getElementById('addressSection').style.display = isDelivery ? 'block' : 'none';
+        updatePlaceOrderBtn();
+    }
+
+    document.querySelectorAll('input[name="orderType"]').forEach(radio => {
+        radio.addEventListener('change', toggleSections);
+    });
+
+    document.getElementById('useLocationBtn').addEventListener('click', () => {
+        const status = document.getElementById('locationStatus');
+        if (!navigator.geolocation) {
+            status.className = 'alert alert-danger small py-2';
+            status.textContent = 'Geolocation is not supported by your browser.';
+            status.classList.remove('d-none');
+            return;
+        }
+        status.className = 'alert alert-info small py-2';
+        status.textContent = 'Fetching your location...';
+        status.classList.remove('d-none');
+
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lng;
+            document.getElementById('coordsDisplay').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            status.className = 'alert alert-success small py-2';
+            status.textContent = 'Location captured successfully.';
+            await validateDelivery(lat, lng);
+        }, (err) => {
+            status.className = 'alert alert-danger small py-2';
+            status.textContent = 'Could not get location. Please allow location access and try again.';
+        }, { enableHighAccuracy: true, timeout: 15000 });
+    });
+
+    document.getElementById('checkoutForm').addEventListener('submit', (e) => {
+        if (!isDelivery) return;
+        const lat = parseFloat(document.getElementById('latitude').value);
+        const lng = parseFloat(document.getElementById('longitude').value);
+        const address = document.getElementById('address').value.trim();
+        const city = document.getElementById('city').value.trim();
+        const pin = document.getElementById('pinCode').value.trim();
+
+        if (!address || !city || !pin || !lat || !lng) {
+            e.preventDefault();
+            notify('Please share your location and fill in the complete delivery address.', 'warning', { title: 'Checkout' });
+            return;
+        }
+        if (!canDeliver) {
+            e.preventDefault();
+            notify(`Sorry, we cannot deliver to your location. We only deliver within ${radiusKm} km.`, 'error', { title: 'Delivery unavailable' });
+        }
+    });
+
+    toggleSections();
+</script>
+}

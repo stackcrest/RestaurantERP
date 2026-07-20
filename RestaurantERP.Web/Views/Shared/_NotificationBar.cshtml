@@ -1,0 +1,18 @@
+@using System.Text.Json
+@{
+    var notifications = new List<Dictionary<string, string>>();
+    if (TempData["Success"] is string success)
+        notifications.Add(new() { ["type"] = "success", ["message"] = success, ["title"] = "Success" });
+    if (TempData["Error"] is string error)
+        notifications.Add(new() { ["type"] = "error", ["message"] = error, ["title"] = "Error" });
+    if (TempData["Warning"] is string warning)
+        notifications.Add(new() { ["type"] = "warning", ["message"] = warning, ["title"] = "Warning" });
+    if (TempData["Info"] is string info)
+        notifications.Add(new() { ["type"] = "info", ["message"] = info, ["title"] = "Info" });
+}
+<link rel="stylesheet" href="~/css/notification-bar.css" asp-append-version="true" />
+<div id="notificationBarHost" class="notification-bar-host" aria-live="polite" aria-atomic="true"></div>
+@if (notifications.Count > 0)
+{
+    <script id="serverNotifications" type="application/json">@Html.Raw(JsonSerializer.Serialize(notifications))</script>
+}

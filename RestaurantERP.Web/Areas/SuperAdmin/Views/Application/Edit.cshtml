@@ -1,0 +1,82 @@
+@model RestaurantERP.Domain.Entities.AppContentItem
+@{
+    ViewData["Title"] = "Edit Content";
+    Layout = "~/Areas/SuperAdmin/Views/Shared/_SuperAdminLayout.cshtml";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">@Model.Label</h6>
+                <small class="text-muted"><code>@Model.ContentKey</code> · @Model.Section · @Model.ContentType</small>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="section" value="@Model.Section" />
+
+                    @if (Model.ContentType == RestaurantERP.Domain.Enums.AppContentType.Html)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">HTML Content</label>
+                            <textarea name="value" id="htmlEditor" class="form-control" rows="8">@Model.Value</textarea>
+                        </div>
+                    }
+                    else if (Model.ContentType is RestaurantERP.Domain.Enums.AppContentType.Image or RestaurantERP.Domain.Enums.AppContentType.File)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">URL</label>
+                            <input type="text" name="value" class="form-control" value="@Model.Value" />
+                        </div>
+                        @if (Model.ContentType == RestaurantERP.Domain.Enums.AppContentType.Image && !string.IsNullOrEmpty(Model.Value))
+                        {
+                            <img src="@Model.Value" class="img-fluid rounded mb-3" style="max-height:200px;" alt="preview" />
+                        }
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Upload New File</label>
+                            <input type="file" name="upload" class="form-control" accept="image/*,.pdf,.svg,.ico" />
+                        </div>
+                    }
+                    else if (Model.ContentType == RestaurantERP.Domain.Enums.AppContentType.Url)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">URL / Link</label>
+                            <input type="url" name="value" class="form-control" value="@Model.Value" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Text</label>
+                            <textarea name="value" class="form-control" rows="4">@Model.Value</textarea>
+                        </div>
+                    }
+
+                    <div class="form-check mb-4">
+                        <input type="checkbox" name="isPublished" value="true" class="form-check-input" id="isPublished" @(Model.IsPublished ? "checked" : "") />
+                        <label class="form-check-label" for="isPublished">Published (visible on site)</label>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Save</button>
+                        <a href="/SuperAdmin/Application?section=@Model.Section" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.css" rel="stylesheet" />
+}
+@section Scripts {
+    @if (Model.ContentType == RestaurantERP.Domain.Enums.AppContentType.Html)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.js"></script>
+        <script>$('#htmlEditor').summernote({ height: 250 });</script>
+    }
+}

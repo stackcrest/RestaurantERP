@@ -1,0 +1,57 @@
+#whatsappFloat {
+    position: fixed;
+    bottom: 96px;
+    right: 24px;
+    z-index: 1040;
+}
+#whatsappFloat a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #25D366;
+    color: #fff;
+    font-size: 1.75rem;
+    box-shadow: 0 4px 20px rgba(37, 211, 102, 0.45);
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+#whatsappFloat a:hover {
+    color: #fff;
+    transform: scale(1.08);
+    box-shadow: 0 6px 24px rgba(37, 211, 102, 0.55);
+}
+#whatsappFloat .wa-label {
+    position: absolute;
+    right: 64px;
+    white-space: nowrap;
+    background: #fff;
+    color: #212529;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+#whatsappFloat:hover .wa-label {
+    opacity: 1;
+}
+@media (min-width: 768px) {
+    #whatsappFloat {
+        bottom: 30px;
+        right: 30px;
+    }
+    body:has(#desktopCartWrapper:not(.d-none)) #whatsappFloat {
+        bottom: 100px;
+    }
+}
+@media (max-width: 767px) {
+    body:has(#floatingCartBar:not(.d-none)) #whatsappFloat {
+        bottom: 72px;
+    }
+}

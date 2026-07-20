@@ -1,0 +1,87 @@
+@model RestaurantERP.Domain.Entities.BlogPost
+@{
+    var related = ViewBag.RelatedPosts as List<RestaurantERP.Domain.Entities.BlogPost> ?? new();
+}
+
+<article class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <nav aria-label="breadcrumb" class="mb-4">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Home</a></li>
+                        <li class="breadcrumb-item"><a href="/Blog" class="text-decoration-none">Blog</a></li>
+                        <li class="breadcrumb-item active text-truncate" style="max-width: 200px;">@Model.Title</li>
+                    </ol>
+                </nav>
+
+                @if (!string.IsNullOrEmpty(Model.FeaturedImageUrl))
+                {
+                    <img src="@Model.FeaturedImageUrl" class="img-fluid rounded-4 w-100 mb-4 shadow-sm" alt="@Model.Title" style="max-height: 420px; object-fit: cover;" />
+                }
+
+                <div class="d-flex flex-wrap align-items-center gap-3 text-muted small mb-3">
+                    <span><i class="bi bi-calendar3 me-1"></i>@(Model.PublishedAt?.ToLocalTime().ToString("MMMM dd, yyyy") ?? Model.CreatedAt.ToLocalTime().ToString("MMMM dd, yyyy"))</span>
+                    <span><i class="bi bi-person me-1"></i>@Model.AuthorName</span>
+                </div>
+
+                <h1 class="fw-bold mb-4">@Model.Title</h1>
+
+                @if (!string.IsNullOrEmpty(Model.Summary))
+                {
+                    <p class="lead text-muted border-start border-4 border-primary ps-3 mb-4">@Model.Summary</p>
+                }
+
+                <div class="blog-content">
+                    @Html.Raw(Model.Content)
+                </div>
+
+                @if (!string.IsNullOrEmpty(Model.Tags))
+                {
+                    <div class="mt-5 pt-4 border-top">
+                        <span class="text-muted me-2">Tags:</span>
+                        @foreach (var t in Model.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                        {
+                            <a href="/Blog?tag=@Uri.EscapeDataString(t)" class="badge bg-light text-dark text-decoration-none me-1">@t</a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (related.Any())
+        {
+            <div class="row justify-content-center mt-5 pt-5">
+                <div class="col-lg-10">
+                    <h4 class="fw-bold mb-4">More from our blog</h4>
+                    <div class="row g-4">
+                        @foreach (var post in related)
+                        {
+                            <div class="col-md-4">
+                                <a href="/Blog/Post/@post.Slug" class="card h-100 border-0 shadow-sm text-decoration-none text-dark">
+                                    <img src="@(post.FeaturedImageUrl ?? AppContent.Get("blog.post.fallback_image"))"
+                                         class="card-img-top" alt="@post.Title" style="height: 140px; object-fit: cover;" />
+                                    <div class="card-body">
+                                        <h6 class="fw-bold">@post.Title</h6>
+                                        <small class="text-muted">@(post.PublishedAt?.ToLocalTime().ToString("dd MMM yyyy"))</small>
+                                    </div>
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</article>
+
+@section Styles {
+<style>
+    .blog-content { font-size: 1.05rem; line-height: 1.8; color: #333; }
+    .blog-content img { max-width: 100%; height: auto; border-radius: 8px; margin: 1rem 0; }
+    .blog-content h2, .blog-content h3 { margin-top: 1.5rem; margin-bottom: 1rem; font-weight: 700; }
+    .blog-content p { margin-bottom: 1rem; }
+    .blog-content ul, .blog-content ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+    .blog-content blockquote { border-left: 4px solid var(--primary); padding-left: 1rem; color: #666; font-style: italic; }
+</style>
+}

@@ -1,0 +1,72 @@
+@model RestaurantERP.Domain.Entities.MenuItem
+@{
+    var cartQuantities = ViewBag.CartQuantities as Dictionary<Guid, int> ?? new();
+    var itemsWithOptions = ViewBag.ItemsWithOptions as HashSet<Guid> ?? new();
+    var qty = cartQuantities.GetValueOrDefault(Model.Id);
+    var hasOptions = itemsWithOptions.Contains(Model.Id);
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var canPlaceOrders = ViewBag.CanPlaceOrders as bool? ?? true;
+}
+
+<div class="col-sm-6 col-xl-4">
+    <div class="card menu-card h-100 position-relative">
+        <a href="/Menu/Details/@Model.Id" class="text-decoration-none">
+            <div class="position-relative">
+                <img src="@(Model.ImageUrl ?? AppContent.Get("menu.item.fallback_image"))"
+                     class="card-img-top" alt="@Model.Name" style="height: 180px; object-fit: cover;">
+                @if (!Model.IsAvailable)
+                {
+                    <div class="position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center">
+                        <span class="badge bg-danger">Unavailable</span>
+                    </div>
+                }
+            </div>
+            <div class="card-body pb-5">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="@(Model.IsVeg ? "veg-badge" : "nonveg-badge")"></span>
+                    <h6 class="card-title mb-0 text-dark text-truncate">@Model.Name</h6>
+                </div>
+                <p class="card-text small text-muted mb-2 text-truncate">@Model.Description</p>
+                <div class="d-flex align-items-center gap-2 small text-muted">
+                    <span class="text-warning"><i class="bi bi-star-fill"></i> @Model.AverageRating.ToString("N1")</span>
+                    <span><i class="bi bi-clock"></i> @Model.PreparationTimeMinutes min</span>
+                </div>
+            </div>
+        </a>
+
+        <div class="position-absolute bottom-0 end-0 m-3">
+            @if (!Model.IsAvailable)
+            {
+                <span class="badge bg-secondary">Sold out</span>
+            }
+            else if (!isAuthenticated)
+            {
+                <a href="/Account/Login" class="btn btn-sm blinkit-add-btn">ADD</a>
+            }
+            else if (!canPlaceOrders)
+            {
+                <span class="badge bg-secondary">Staff account</span>
+            }
+            else if (hasOptions)
+            {
+                <a href="/Menu/Details/@Model.Id" class="btn btn-sm blinkit-add-btn">ADD</a>
+            }
+            else if (qty > 0)
+            {
+                <div class="blinkit-qty-stepper" data-item-id="@Model.Id">
+                    <button type="button" class="btn qty-minus" aria-label="Decrease">−</button>
+                    <span class="qty-value">@qty</span>
+                    <button type="button" class="btn qty-plus" aria-label="Increase">+</button>
+                </div>
+            }
+            else
+            {
+                <button type="button" class="btn btn-sm blinkit-add-btn" data-item-id="@Model.Id">ADD</button>
+            }
+        </div>
+
+        <div class="position-absolute bottom-0 start-0 m-3">
+            <span class="fw-bold text-primary">₹@Model.BasePrice</span>
+        </div>
+    </div>
+</div>

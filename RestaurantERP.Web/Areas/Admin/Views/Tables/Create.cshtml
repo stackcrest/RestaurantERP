@@ -1,0 +1,57 @@
+@{
+    ViewData["Title"] = "Add Table";
+    var sections = ViewBag.Sections as List<RestaurantERP.Domain.Entities.TableSection> ?? new();
+}
+
+<div class="mb-3">
+    <a href="/Admin/Tables" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">New Table</h6>
+            </div>
+            <div class="card-body">
+                @if (!sections.Any())
+                {
+                    <div class="alert alert-warning">
+                        Create a table section first from the <a href="/Admin/Tables">Tables page</a>.
+                    </div>
+                }
+
+                <form asp-action="Create" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Table Number / Name <span class="text-danger">*</span></label>
+                        <input type="text" name="tableNumber" class="form-control" placeholder="e.g. T-01, A1" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Section <span class="text-danger">*</span></label>
+                        <select name="sectionId" class="form-select" required @(sections.Any() ? "" : "disabled")>
+                            <option value="">Select section</option>
+                            @foreach (var sec in sections)
+                            {
+                                <option value="@sec.Id">@sec.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Capacity (seats)</label>
+                        <input type="number" name="capacity" class="form-control" value="4" min="1" max="20" />
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Initial Status</label>
+                        <select name="status" class="form-select">
+                            <option value="Available">Available</option>
+                            <option value="Occupied">Occupied</option>
+                            <option value="Reserved">Reserved</option>
+                            <option value="Cleaning">Cleaning</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" @(sections.Any() ? "" : "disabled")>Create Table</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

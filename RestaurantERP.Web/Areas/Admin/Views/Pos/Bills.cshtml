@@ -1,0 +1,70 @@
+@model List<RestaurantERP.Domain.Entities.Bill>
+@using RestaurantERP.Domain.Enums
+@{
+    ViewData["Title"] = "Bills";
+    var currentSource = ViewBag.CurrentSource as string;
+    var features = ViewBag.Features as RestaurantERP.Application.Common.PosFeatureState;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h5 class="fw-bold mb-1">Bill History</h5>
+        <p class="text-muted small mb-0">Offline POS bills and online order bills</p>
+    </div>
+    <a href="/Admin/Pos" class="btn btn-primary btn-sm"><i class="bi bi-cash-stack me-1"></i>Open POS</a>
+</div>
+
+<div class="btn-group mb-3">
+    <a href="/Admin/Pos/Bills" class="btn btn-sm @(string.IsNullOrEmpty(currentSource) ? "btn-primary" : "btn-outline-secondary")">All</a>
+    <a href="/Admin/Pos/Bills?source=Offline" class="btn btn-sm @(currentSource == "Offline" ? "btn-primary" : "btn-outline-secondary")">Offline (POS)</a>
+    <a href="/Admin/Pos/Bills?source=Online" class="btn btn-sm @(currentSource == "Online" ? "btn-primary" : "btn-outline-secondary")">Online</a>
+</div>
+
+@if (features != null && !features.OnlineBilling)
+{
+    <div class="alert alert-info small">Online bill generation is disabled by SuperAdmin.</div>
+}
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Bill #</th>
+                    <th>Source</th>
+                    <th>Customer</th>
+                    <th>Amount</th>
+                    <th>Payment</th>
+                    <th>Cashier</th>
+                    <th>Date</th>
+                    <th>Prints</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var bill in Model)
+                {
+                    <tr>
+                        <td class="fw-medium">@bill.BillNumber</td>
+                        <td>
+                            <span class="badge @(bill.Source == BillSource.Offline ? "bg-dark" : "bg-info text-dark")">
+                                @bill.Source
+                            </span>
+                        </td>
+                        <td>@(bill.CustomerName ?? "—")</td>
+                        <td class="fw-bold">₹@bill.TotalAmount.ToString("N0")</td>
+                        <td>@bill.PaymentMethod</td>
+                        <td class="small text-muted">@bill.GeneratedByName</td>
+                        <td class="small">@bill.CreatedAt.ToLocalTime().ToString("dd MMM, hh:mm tt")</td>
+                        <td>@bill.PrintCount</td>
+                        <td>
+                            <a href="/Admin/Pos/Print/@bill.Id" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-printer"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

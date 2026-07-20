@@ -1,0 +1,57 @@
+@model RestaurantERP.Domain.Entities.Ingredient
+@{
+    ViewData["Title"] = "Edit Ingredient";
+}
+
+<div class="mb-3">
+    <a href="/Admin/Inventory?tab=ingredients" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Edit — @Model.Name</h6>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info small py-2">
+                    Current stock: <strong>@Model.CurrentStock @Model.Unit</strong> — use Adjust on the list page to change stock.
+                </div>
+                <form asp-action="EditIngredient" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" name="name" class="form-control" value="@Model.Name" required />
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label">Unit</label>
+                            <input type="text" name="unit" class="form-control" value="@Model.Unit" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Cost per Unit (₹)</label>
+                            <input type="number" name="unitCost" class="form-control" step="0.01" value="@Model.UnitCost" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Low Stock Threshold</label>
+                        <input type="number" name="lowStockThreshold" class="form-control" step="0.01" value="@Model.LowStockThreshold" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Expiry Date</label>
+                        <input type="date" name="expiryDate" class="form-control" value="@(Model.ExpiryDate?.ToString("yyyy-MM-dd"))" />
+                    </div>
+                    <div class="form-check mb-4">
+                        <input type="checkbox" name="isPerishable" value="true" class="form-check-input" id="isPerishable" @(Model.IsPerishable ? "checked" : "") />
+                        <label class="form-check-label" for="isPerishable">Perishable</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 mb-2">Save</button>
+                </form>
+                <form asp-action="DeleteIngredient" method="post" onsubmit="return confirm('Delete this ingredient?')">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <button type="submit" class="btn btn-outline-danger w-100">Delete Ingredient</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

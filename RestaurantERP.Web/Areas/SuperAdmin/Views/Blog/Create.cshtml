@@ -1,0 +1,32 @@
+@{
+    ViewData["Title"] = "Create Blog Post";
+}
+
+<div class="row">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">New Blog Post</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post" enctype="multipart/form-data">
+                    @await Html.PartialAsync("_BlogForm", (RestaurantERP.Domain.Entities.BlogPost?)null)
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">Create Post</button>
+                        <a href="/SuperAdmin/Blog" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.css" rel="stylesheet" />
+}
+
+@section Scripts {
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.20/dist/summernote-lite.min.js"></script>
+<script src="~/js/blog-editor.js"></script>
+}

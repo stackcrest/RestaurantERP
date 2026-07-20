@@ -1,0 +1,136 @@
+@model RestaurantERP.Domain.Entities.Order
+@using RestaurantERP.Application.Interfaces
+@{
+    ViewData["Title"] = Model.OrderNumber;
+    var timeline = ViewBag.Timeline as List<OrderTrackingStep> ?? new();
+}
+
+<div class="container py-3" style="max-width: 720px;">
+    <div class="d-flex align-items-center mb-3">
+        <a href="/Orders" class="btn btn-light rounded-circle me-2"><i class="bi bi-arrow-left"></i></a>
+        <div>
+            <h1 class="h5 fw-bold mb-0">@Model.OrderNumber</h1>
+            <small class="text-muted">@Model.OrderType • @Model.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")</small>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold mb-0">Track Your Order</h6>
+                <partial name="_OrderStatusBadge" model="Model.Status" />
+            </div>
+            <partial name="_OrderTrackingTimeline" model="timeline" />
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="fw-bold mb-3">Order Items</h6>
+            @foreach (var item in Model.Items)
+            {
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <div>
+                        <span>@item.MenuItemName</span>
+                        @if (!string.IsNullOrEmpty(item.VariantName))
+                        {
+                            <small class="text-muted d-block">@item.VariantName</small>
+                        }
+                        @if (item.AddOns.Any())
+                        {
+                            <small class="text-muted d-block">+ @string.Join(", ", item.AddOns.Select(a => a.AddOnName))</small>
+                        }
+                    </div>
+                    <div class="text-end">
+                        <span>x@item.Quantity</span>
+                        <span class="fw-bold d-block">₹@item.TotalPrice.ToString("N0")</span>
+                    </div>
+                </div>
+            }
+
+            <div class="mt-3 pt-2">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>Subtotal</span><span>₹@Model.SubTotal.ToString("N0")</span>
+                </div>
+                @if (Model.DiscountAmount > 0)
+                {
+                    <div class="d-flex justify-content-between small mb-1 text-success">
+                        <span>Discount</span><span>-₹@Model.DiscountAmount.ToString("N0")</span>
+                    </div>
+                }
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>Tax (GST)</span><span>₹@Model.TaxAmount.ToString("N0")</span>
+                </div>
+                @if (Model.DeliveryFee > 0)
+                {
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>Delivery Fee</span><span>₹@Model.DeliveryFee.ToString("N0")</span>
+                    </div>
+                }
+                <hr>
+                <div class="d-flex justify-content-between fw-bold">
+                    <span>Total</span><span class="text-primary h5 mb-0">₹@Model.TotalAmount.ToString("N0")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row small">
+                <div class="col-6 mb-2">
+                    <span class="text-muted d-block">Payment Method</span>
+                    <span class="fw-medium">@Model.PaymentMethod</span>
+                </div>
+                <div class="col-6 mb-2">
+                    <span class="text-muted d-block">Payment Status</span>
+                    <span class="badge bg-success">@Model.PaymentStatus</span>
+                </div>
+                @if (!string.IsNullOrEmpty(Model.DeliveryAddress))
+                {
+                    <div class="col-12 mt-2">
+                        <span class="text-muted d-block">Delivery Address</span>
+                        <span>@Model.DeliveryAddress</span>
+                        @if (!string.IsNullOrEmpty(Model.DeliveryLandmark))
+                        {
+                            <small class="text-muted d-block">Landmark: @Model.DeliveryLandmark</small>
+                        }
+                        @if (Model.DeliveryDistanceKm.HasValue)
+                        {
+                            <small class="text-muted d-block"><i class="bi bi-geo-alt me-1"></i>@Model.DeliveryDistanceKm.Value.ToString("F1") km from restaurant</small>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @{
+        var orderWaUrl = ViewBag.WhatsAppUrl as string;
+    }
+    @if (!string.IsNullOrEmpty(orderWaUrl))
+    {
+        <a href="@orderWaUrl" target="_blank" rel="noopener noreferrer" class="btn btn-success w-100 mb-3">
+            <i class="bi bi-whatsapp me-2"></i>@AppContent.Get("integrations.whatsapp.button_label", "Chat on WhatsApp")
+        </a>
+    }
+
+    @if (Model.Status < RestaurantERP.Domain.Enums.OrderStatus.Preparing)
+    {
+        <form asp-action="Cancel" method="post">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <button type="submit" class="btn btn-outline-danger w-100" onclick="return confirm('Are you sure you want to cancel this order?')">
+                Cancel Order
+            </button>
+        </form>
+    }
+</div>

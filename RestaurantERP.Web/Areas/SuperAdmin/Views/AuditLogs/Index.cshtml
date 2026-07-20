@@ -1,0 +1,109 @@
+@model List<RestaurantERP.Domain.Entities.AuditLog>
+@{
+    ViewData["Title"] = "Audit Logs";
+    var currentAction = ViewBag.CurrentAction as string;
+    var currentEntity = ViewBag.CurrentEntity as string;
+    var actions = ViewBag.Actions as List<string>;
+    var entities = ViewBag.Entities as List<string>;
+    var currentPage = (int)ViewBag.CurrentPage;
+    var totalPages = (int)ViewBag.TotalPages;
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small">Filter by Action</label>
+                <select name="action" class="form-select">
+                    <option value="">All Actions</option>
+                    @foreach (var a in actions ?? new())
+                    {
+                        if (a == currentAction)
+                        {
+                            <option value="@a" selected>@a</option>
+                        }
+                        else
+                        {
+                            <option value="@a">@a</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small">Filter by Entity</label>
+                <select name="entity" class="form-select">
+                    <option value="">All Entities</option>
+                    @foreach (var e in entities ?? new())
+                    {
+                        if (e == currentEntity)
+                        {
+                            <option value="@e" selected>@e</option>
+                        }
+                        else
+                        {
+                            <option value="@e">@e</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary">Filter</button>
+                <a href="/SuperAdmin/AuditLogs" class="btn btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Entity</th>
+                        <th>Entity ID</th>
+                        <th>IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in Model)
+                    {
+                        var actionClass = log.Action switch {
+                            "Create" => "success",
+                            "Update" => "primary",
+                            "Delete" => "danger",
+                            "Login" => "info",
+                            _ => "secondary"
+                        };
+                        var entityIdShort = log.EntityId != null && log.EntityId.Length > 8 ? log.EntityId.Substring(0, 8) + "..." : log.EntityId;
+                        <tr>
+                            <td class="small">@log.CreatedAt.ToString("MMM dd, HH:mm:ss")</td>
+                            <td>@log.UserEmail</td>
+                            <td><span class="badge bg-@actionClass">@log.Action</span></td>
+                            <td>@log.EntityType</td>
+                            <td class="small text-muted">@entityIdShort</td>
+                            <td class="small text-muted">@log.IpAddress</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@if (totalPages > 1)
+{
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            @for (var i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")">
+                    <a class="page-link" href="/SuperAdmin/AuditLogs?pageNum=@i&action=@currentAction&entity=@currentEntity">@i</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}

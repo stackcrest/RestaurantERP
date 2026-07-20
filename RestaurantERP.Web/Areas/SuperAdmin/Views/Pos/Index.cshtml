@@ -1,0 +1,108 @@
+@{
+    ViewData["Title"] = "POS Settings";
+    var config = ViewBag.Config as RestaurantERP.Application.Common.PosConfig;
+    var features = ViewBag.Features as RestaurantERP.Application.Common.PosFeatureState;
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-toggle-on me-2"></i>POS Access & Features</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small">Control who can use POS and which billing modes are active. Role access is managed in <a href="/SuperAdmin/MenuAccess">Menu Access</a>.</p>
+
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <div class="fw-semibold">POS System</div>
+                            <small class="text-muted">Master switch for entire POS module</small>
+                        </div>
+                        <form asp-action="ToggleFeature" method="post" class="d-inline">
+                            <input type="hidden" name="featureKey" value="pos_enabled" />
+                            <input type="hidden" name="enabled" value="@(!features!.PosEnabled)" />
+                            <button type="submit" class="btn btn-sm @(features.PosEnabled ? "btn-success" : "btn-outline-secondary")">
+                                @(features.PosEnabled ? "Enabled" : "Disabled")
+                            </button>
+                        </form>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <div class="fw-semibold">Offline Billing (POS Terminal)</div>
+                            <small class="text-muted">Walk-in counter sales at Admin → POS</small>
+                        </div>
+                        <form asp-action="ToggleFeature" method="post" class="d-inline">
+                            <input type="hidden" name="featureKey" value="pos_offline_billing" />
+                            <input type="hidden" name="enabled" value="@(!features.OfflineBilling)" />
+                            <button type="submit" class="btn btn-sm @(features.OfflineBilling ? "btn-success" : "btn-outline-secondary")">
+                                @(features.OfflineBilling ? "Enabled" : "Disabled")
+                            </button>
+                        </form>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <div>
+                            <div class="fw-semibold">Online Bill Generation</div>
+                            <small class="text-muted">Generate bills for web/app orders from Admin → Orders</small>
+                        </div>
+                        <form asp-action="ToggleFeature" method="post" class="d-inline">
+                            <input type="hidden" name="featureKey" value="pos_online_billing" />
+                            <input type="hidden" name="enabled" value="@(!features.OnlineBilling)" />
+                            <button type="submit" class="btn btn-sm @(features.OnlineBilling ? "btn-success" : "btn-outline-secondary")">
+                                @(features.OnlineBilling ? "Enabled" : "Disabled")
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="alert alert-info small mt-3 mb-0">
+                    <i class="bi bi-shield-lock me-1"></i>
+                    Grant POS access per role in <a href="/SuperAdmin/MenuAccess" class="alert-link">Menu Access</a> → <strong>POS / Billing</strong> section.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-receipt me-2"></i>Bill Configuration</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="SaveSettings" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">GSTIN</label>
+                        <input type="text" name="gstin" class="form-control" value="@config?.Gstin" placeholder="22AAAAA0000A1Z5" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bill Number Prefix</label>
+                        <input type="text" name="billPrefix" class="form-control" value="@(config?.BillPrefix ?? "BILL")" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Restaurant Phone (on bill)</label>
+                        <input type="text" name="restaurantPhone" class="form-control" value="@config?.RestaurantPhone" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bill Footer Note</label>
+                        <input type="text" name="billFooterNote" class="form-control" value="@config?.BillFooterNote" placeholder="Thank you! Visit again." />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Save Bill Settings</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4 bg-primary text-white">
+            <div class="card-body">
+                <h6 class="fw-bold mb-2">Quick Links</h6>
+                <a href="/Admin/Pos" class="btn btn-light btn-sm me-1 mb-1">POS Terminal</a>
+                <a href="/Admin/Pos/Bills" class="btn btn-light btn-sm me-1 mb-1">View Bills</a>
+                <a href="/SuperAdmin/MenuAccess" class="btn btn-outline-light btn-sm mb-1">Menu Access</a>
+            </div>
+        </div>
+    </div>
+</div>

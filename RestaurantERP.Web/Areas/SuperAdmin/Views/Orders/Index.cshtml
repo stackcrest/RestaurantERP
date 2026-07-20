@@ -1,0 +1,104 @@
+@model List<RestaurantERP.Domain.Entities.Order>
+@using RestaurantERP.Application.Common
+@using RestaurantERP.Domain.Enums
+@{
+    ViewData["Title"] = "Orders";
+    var currentStatus = ViewBag.CurrentStatus as string;
+    var currentType = ViewBag.CurrentType as string;
+    var areaPrefix = ViewBag.AreaPrefix as string ?? "/Admin";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h5 class="fw-bold mb-1">Order Management</h5>
+        <p class="text-muted small mb-0">Track and manage all customer orders</p>
+    </div>
+    <a href="@areaPrefix/Orders/Tracking" class="btn btn-primary">
+        <i class="bi bi-kanban me-1"></i>Tracking Board
+    </a>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="btn-group flex-wrap">
+        <a href="@areaPrefix/Orders" class="btn btn-sm @(string.IsNullOrEmpty(currentStatus) ? "btn-primary" : "btn-outline-secondary")">All</a>
+        <a href="@areaPrefix/Orders?status=active" class="btn btn-sm @(currentStatus == "active" ? "btn-primary" : "btn-outline-secondary")">Active</a>
+        <a href="@areaPrefix/Orders?status=Placed" class="btn btn-sm @(currentStatus == "Placed" ? "btn-primary" : "btn-outline-secondary")">Placed</a>
+        <a href="@areaPrefix/Orders?status=Preparing" class="btn btn-sm @(currentStatus == "Preparing" ? "btn-primary" : "btn-outline-secondary")">Preparing</a>
+        <a href="@areaPrefix/Orders?status=OutForDelivery" class="btn btn-sm @(currentStatus == "OutForDelivery" ? "btn-primary" : "btn-outline-secondary")">Out for Delivery</a>
+        <a href="@areaPrefix/Orders?status=Delivered" class="btn btn-sm @(currentStatus == "Delivered" ? "btn-primary" : "btn-outline-secondary")">Delivered</a>
+        <a href="@areaPrefix/Orders?status=Completed" class="btn btn-sm @(currentStatus == "Completed" ? "btn-primary" : "btn-outline-secondary")">Completed</a>
+        <a href="@areaPrefix/Orders?status=Cancelled" class="btn btn-sm @(currentStatus == "Cancelled" ? "btn-primary" : "btn-outline-secondary")">Cancelled</a>
+    </div>
+    <div class="btn-group">
+        <a href="@areaPrefix/Orders@(currentStatus != null ? $"?status={currentStatus}" : "")" class="btn btn-sm @(string.IsNullOrEmpty(currentType) ? "btn-dark" : "btn-outline-dark")">All Types</a>
+        <a href="@areaPrefix/Orders?type=Delivery@(currentStatus != null ? $"&status={currentStatus}" : "")" class="btn btn-sm @(currentType == "Delivery" ? "btn-dark" : "btn-outline-dark")">Delivery</a>
+        <a href="@areaPrefix/Orders?type=DineIn@(currentStatus != null ? $"&status={currentStatus}" : "")" class="btn btn-sm @(currentType == "DineIn" ? "btn-dark" : "btn-outline-dark")">Dine In</a>
+        <a href="@areaPrefix/Orders?type=Takeaway@(currentStatus != null ? $"&status={currentStatus}" : "")" class="btn btn-sm @(currentType == "Takeaway" ? "btn-dark" : "btn-outline-dark")">Takeaway</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        @if (!Model.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-inbox display-4 d-block mb-2"></i>
+                No orders found
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Order #</th>
+                            <th>Customer</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Amount</th>
+                            <th>Time</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in Model)
+                        {
+                            var progress = OrderStatusHelper.GetProgressPercent(order.OrderType, order.Status);
+                            <tr>
+                                <td class="fw-medium">@order.OrderNumber</td>
+                                <td>
+                                    <div>@order.User.FullName</div>
+                                    @if (order.OrderType == OrderType.Delivery && order.DeliveryDistanceKm.HasValue)
+                                    {
+                                        <small class="text-muted"><i class="bi bi-geo-alt"></i> @order.DeliveryDistanceKm.Value.ToString("F1") km</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @(order.OrderType == OrderType.Delivery ? "bg-info text-dark" : "bg-light text-dark")">
+                                        @order.OrderType
+                                    </span>
+                                </td>
+                                <td><partial name="_OrderStatusBadge" model="order.Status" /></td>
+                                <td style="min-width: 120px;">
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar bg-primary" style="width: @progress%"></div>
+                                    </div>
+                                    <small class="text-muted">@progress%</small>
+                                </td>
+                                <td class="fw-bold">₹@order.TotalAmount.ToString("N0")</td>
+                                <td class="text-muted small">@order.CreatedAt.ToLocalTime().ToString("dd MMM, hh:mm tt")</td>
+                                <td>
+                                    <a href="@areaPrefix/Orders/Details/@order.Id" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye me-1"></i>Track
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

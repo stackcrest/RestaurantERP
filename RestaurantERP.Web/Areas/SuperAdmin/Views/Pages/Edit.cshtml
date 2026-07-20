@@ -1,0 +1,173 @@
+@model RestaurantERP.Domain.Entities.UiPage
+@{
+    ViewData["Title"] = "Edit: " + Model.Title;
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Content Blocks</h6>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addBlockModal">
+                    <i class="bi bi-plus"></i> Add Block
+                </button>
+            </div>
+            <div class="card-body">
+                @if (!Model.Blocks.Any())
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-layers display-4 d-block mb-2"></i>
+                        <p>No content blocks yet. Add one to get started.</p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var block in Model.Blocks)
+                    {
+                        <div class="card mb-3">
+                            <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+                                <span class="badge bg-primary">@block.BlockType</span>
+                                <form asp-action="DeleteBlock" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@block.Id" />
+                                    <button type="submit" class="btn btn-sm btn-link text-danger" onclick="return confirm('Delete this block?')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="card-body">
+                                <form asp-action="UpdateBlock" method="post">
+                                    <input type="hidden" name="id" value="@block.Id" />
+                                    @if (block.BlockType == BlockType.Text)
+                                    {
+                                        <textarea name="content" class="form-control" rows="4">@block.Content</textarea>
+                                    }
+                                    else
+                                    {
+                                        <input type="text" name="content" value="@block.Content" class="form-control" />
+                                    }
+                                    <button type="submit" class="btn btn-sm btn-outline-primary mt-2">Save Block</button>
+                                </form>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Page Settings</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="Update" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Title</label>
+                        <input type="text" name="title" value="@Model.Title" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Slug</label>
+                        <input type="text" name="slug" value="@Model.Slug" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Meta Description</label>
+                        <textarea name="metaDescription" class="form-control" rows="2">@Model.MetaDescription</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Visibility</label>
+                        <select name="visibility" class="form-select">
+                            @foreach (var v in Enum.GetValues<PageVisibility>())
+                            {
+                                if (v == Model.Visibility)
+                                {
+                                    <option value="@v" selected>
+                                        @(v switch {
+                                            PageVisibility.All => "Everyone (Public)",
+                                            PageVisibility.Customer => "Logged-in Customers",
+                                            PageVisibility.Admin => "Admin Only",
+                                            PageVisibility.Guest => "Guests Only (Not logged in)",
+                                            _ => v.ToString()
+                                        })
+                                    </option>
+                                }
+                                else
+                                {
+                                    <option value="@v">
+                                        @(v switch {
+                                            PageVisibility.All => "Everyone (Public)",
+                                            PageVisibility.Customer => "Logged-in Customers",
+                                            PageVisibility.Admin => "Admin Only",
+                                            PageVisibility.Guest => "Guests Only (Not logged in)",
+                                            _ => v.ToString()
+                                        })
+                                    </option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            @foreach (var s in Enum.GetValues<PageStatus>())
+                            {
+                                if (s == Model.Status)
+                                {
+                                    <option value="@s" selected>@s</option>
+                                }
+                                else
+                                {
+                                    <option value="@s">@s</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Save Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addBlockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="AddBlock" method="post">
+                <input type="hidden" name="pageId" value="@Model.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Content Block</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Block Type</label>
+                        <select name="blockType" class="form-select">
+                            <option value="Text">Text</option>
+                            <option value="Image">Image</option>
+                            <option value="Video">Video</option>
+                            <option value="Gallery">Gallery</option>
+                            <option value="Hero">Hero</option>
+                            <option value="Cta">Call to Action</option>
+                            <option value="Faq">FAQ</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Content</label>
+                        <textarea name="content" class="form-control" rows="4"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Block</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

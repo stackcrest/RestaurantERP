@@ -1,0 +1,52 @@
+@{
+    ViewData["Title"] = "Create Page";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body p-4">
+                <form asp-action="Create" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Page Title</label>
+                        <input type="text" name="title" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">URL Slug</label>
+                        <div class="input-group">
+                            <span class="input-group-text">/</span>
+                            <input type="text" name="slug" class="form-control" placeholder="about-us" required />
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Visibility</label>
+                        <select name="visibility" class="form-select">
+                            @foreach (var v in Enum.GetValues<PageVisibility>())
+                            {
+                                var label = v switch {
+                                    PageVisibility.All => "Everyone (Public)",
+                                    PageVisibility.Customer => "Logged-in Customers",
+                                    PageVisibility.Admin => "Admin Only",
+                                    PageVisibility.Guest => "Guests Only (Not logged in)",
+                                    _ => v.ToString()
+                                };
+                                if (v == PageVisibility.All)
+                                {
+                                    <option value="@v" selected>@label</option>
+                                }
+                                else
+                                {
+                                    <option value="@v">@label</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Create Page</button>
+                        <a href="/SuperAdmin/Pages" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

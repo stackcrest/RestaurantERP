@@ -1,0 +1,127 @@
+@{
+    ViewData["Title"] = "POS Terminal";
+    var disabled = ViewBag.Disabled as bool? ?? false;
+    var disabledMessage = ViewBag.DisabledMessage as string ?? "POS is disabled. Contact SuperAdmin to enable it.";
+    var categories = ViewBag.Categories as List<RestaurantERP.Domain.Entities.Category> ?? new();
+    var items = ViewBag.Items as List<RestaurantERP.Domain.Entities.MenuItem> ?? new();
+    var tables = ViewBag.Tables as List<RestaurantERP.Domain.Entities.RestaurantTable> ?? new();
+}
+
+@if (disabled)
+{
+    <div class="text-center py-5">
+        <i class="bi bi-cash-stack display-1 text-muted d-block mb-3"></i>
+        <h5>POS Unavailable</h5>
+        <p class="text-muted">@disabledMessage</p>
+        <a href="/SuperAdmin/Pos" class="btn btn-primary btn-sm">SuperAdmin POS Settings</a>
+    </div>
+}
+else
+{
+    <div class="row g-3" style="min-height: calc(100vh - 140px);">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <div class="d-flex gap-2 flex-wrap mb-2" id="categoryTabs">
+                        <button type="button" class="btn btn-sm btn-primary cat-tab" data-category="">All</button>
+                        @foreach (var cat in categories)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary cat-tab" data-category="@cat.Id">@cat.Name</button>
+                        }
+                    </div>
+                    <input type="text" id="itemSearch" class="form-control form-control-sm" placeholder="Search items..." />
+                </div>
+                <div class="card-body overflow-auto" style="max-height: calc(100vh - 220px);">
+                    <div class="row g-2" id="posItemsGrid">
+                        @foreach (var item in items)
+                        {
+                            <div class="col-6 col-md-4 col-xl-3 pos-item" data-category="@item.CategoryId" data-name="@item.Name.ToLower()" data-id="@item.Id" data-price="@item.BasePrice" data-name-display="@item.Name">
+                                <button type="button" class="btn btn-light border w-100 text-start p-2 pos-add-btn h-100">
+                                    <div class="fw-semibold small text-truncate">@item.Name</div>
+                                    <div class="text-primary fw-bold">₹@item.BasePrice</div>
+                                    <span class="@(item.IsVeg ? "veg-badge" : "nonveg-badge")" style="transform: scale(0.8);"></span>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card h-100 d-flex flex-column">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-receipt me-2"></i>Current Bill</h6>
+                </div>
+                <div class="card-body flex-grow-1 overflow-auto p-0" id="posCartList">
+                    <div class="text-center text-muted py-5 small">Tap items to add</div>
+                </div>
+                <div class="card-footer bg-white">
+                    <div class="d-flex justify-content-between small mb-1"><span>Subtotal</span><span id="posSubtotal">₹0</span></div>
+                    <div class="d-flex justify-content-between small mb-1 text-success"><span>Discount</span><span id="posDiscount">₹0</span></div>
+                    <div class="d-flex justify-content-between small mb-1"><span>GST</span><span id="posTax">₹0</span></div>
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between fw-bold fs-5 mb-3"><span>Total</span><span class="text-primary" id="posTotal">₹0</span></div>
+
+                    <div class="mb-2">
+                        <label class="form-label small mb-1">Order Type</label>
+                        <select id="orderType" class="form-select form-select-sm">
+                            <option value="Takeaway">Takeaway</option>
+                            <option value="DineIn">Dine In</option>
+                            <option value="Delivery">Delivery</option>
+                        </select>
+                    </div>
+                    <div class="mb-2" id="tableSelectWrap" style="display:none;">
+                        <label class="form-label small mb-1">Table</label>
+                        <select id="tableId" class="form-select form-select-sm">
+                            <option value="">Select table</option>
+                            @foreach (var t in tables)
+                            {
+                                <option value="@t.Id">@t.TableNumber - @t.Section?.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <input type="text" id="customerName" class="form-control form-control-sm" placeholder="Customer name" />
+                        </div>
+                        <div class="col-6">
+                            <input type="text" id="customerPhone" class="form-control form-control-sm" placeholder="Phone" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small mb-1">Payment</label>
+                        <div class="btn-group w-100">
+                            <input type="radio" class="btn-check" name="payment" id="payCash" value="Cash" checked>
+                            <label class="btn btn-outline-secondary btn-sm" for="payCash">Cash</label>
+                            <input type="radio" class="btn-check" name="payment" id="payUpi" value="UPI">
+                            <label class="btn btn-outline-secondary btn-sm" for="payUpi">UPI</label>
+                            <input type="radio" class="btn-check" name="payment" id="payCard" value="Card">
+                            <label class="btn btn-outline-secondary btn-sm" for="payCard">Card</label>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-danger flex-grow-1" id="clearCartBtn">Clear</button>
+                        <button type="button" class="btn btn-primary flex-grow-1" id="checkoutBtn">
+                            <i class="bi bi-printer me-1"></i>Generate Bill
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+@if (!disabled)
+{
+<script src="~/js/pos-terminal.js"></script>
+}
+}
+
+@section Styles {
+<style>
+    .pos-add-btn:hover { border-color: var(--primary) !important; background: #fff5f5 !important; }
+    .pos-cart-row { border-bottom: 1px solid #eee; padding: 8px 12px; }
+</style>
+}

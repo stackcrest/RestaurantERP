@@ -1,0 +1,87 @@
+@{
+    ViewData["Title"] = "Receive Stock";
+    var suppliers = ViewBag.Suppliers as List<RestaurantERP.Domain.Entities.Supplier> ?? new();
+    var ingredients = ViewBag.Ingredients as List<RestaurantERP.Domain.Entities.Ingredient> ?? new();
+}
+
+<div class="mb-3">
+    <a href="/Admin/Inventory?tab=grn" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white">
+        <h6 class="mb-0 fw-bold">New Stock Receipt (GRN)</h6>
+    </div>
+    <div class="card-body">
+        @if (!suppliers.Any() || !ingredients.Any())
+        {
+            <div class="alert alert-warning">
+                Add at least one <a href="/Admin/Inventory?tab=suppliers">supplier</a> and one <a href="/Admin/Inventory?tab=ingredients">ingredient</a> first.
+            </div>
+        }
+        else
+        {
+            <form asp-action="CreateGrn" method="post" id="grnForm">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Supplier *</label>
+                        <select name="supplierId" class="form-select" required>
+                            <option value="">Select supplier</option>
+                            @foreach (var s in suppliers)
+                            {
+                                <option value="@s.Id">@s.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Notes</label>
+                        <input type="text" name="notes" class="form-control" placeholder="Invoice ref, delivery note, etc." />
+                    </div>
+                </div>
+
+                <h6 class="fw-bold mb-3">Items Received</h6>
+                <div id="grnLines">
+                    <div class="row g-2 mb-2 grn-line align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label small">Ingredient</label>
+                            <select name="ingredientIds" class="form-select form-select-sm" required>
+                                <option value="">Select</option>
+                                @foreach (var ing in ingredients)
+                                {
+                                    <option value="@ing.Id">@ing.Name (@ing.Unit)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Quantity</label>
+                            <input type="number" name="quantities" class="form-control form-control-sm" step="0.01" min="0.01" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Unit Price (₹)</label>
+                            <input type="number" name="unitPrices" class="form-control form-control-sm" step="0.01" min="0" value="0" />
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-line d-none">×</button>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary mb-4" id="addLineBtn"><i class="bi bi-plus me-1"></i>Add Line</button>
+                <button type="submit" class="btn btn-primary w-100">Record Stock Receipt</button>
+            </form>
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.getElementById('addLineBtn')?.addEventListener('click', () => {
+        const container = document.getElementById('grnLines');
+        const first = container.querySelector('.grn-line');
+        const clone = first.cloneNode(true);
+        clone.querySelectorAll('input').forEach(i => i.value = i.name === 'unitPrices' ? '0' : '');
+        clone.querySelector('.remove-line')?.classList.remove('d-none');
+        clone.querySelector('.remove-line')?.addEventListener('click', () => clone.remove());
+        container.appendChild(clone);
+    });
+</script>
+}

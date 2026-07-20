@@ -1,0 +1,134 @@
+@model List<RestaurantERP.Domain.Entities.RestaurantTable>
+@using RestaurantERP.Domain.Enums
+@{
+    ViewData["Title"] = "Tables";
+    var sections = ViewBag.Sections as List<RestaurantERP.Domain.Entities.TableSection> ?? new();
+    var selectedSectionId = ViewBag.SelectedSectionId as Guid?;
+
+    string StatusBadge(TableStatus status) => status switch
+    {
+        TableStatus.Available => "success",
+        TableStatus.Occupied => "danger",
+        TableStatus.Reserved => "warning",
+        TableStatus.Cleaning => "info",
+        _ => "secondary"
+    };
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h5 class="fw-bold mb-1">Table Management</h5>
+        <p class="text-muted small mb-0">Manage dine-in tables, sections, and availability</p>
+    </div>
+    <a href="/Admin/Tables/Create" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Add Table
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white d-flex flex-wrap gap-2 align-items-center">
+                <span class="fw-semibold small me-2">Sections:</span>
+                <a href="/Admin/Tables" class="btn btn-sm @(selectedSectionId == null ? "btn-primary" : "btn-outline-secondary")">All</a>
+                @foreach (var sec in sections)
+                {
+                    <a href="/Admin/Tables?sectionId=@sec.Id" class="btn btn-sm @(selectedSectionId == sec.Id ? "btn-primary" : "btn-outline-secondary")">@sec.Name</a>
+                }
+            </div>
+            <div class="card-body">
+                @if (!Model.Any())
+                {
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-columns-gap display-4 d-block mb-2"></i>
+                        <p>No tables yet. Add a section and create your first table.</p>
+                        <a href="/Admin/Tables/Create" class="btn btn-primary btn-sm">Add Table</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="row g-3">
+                        @foreach (var table in Model)
+                        {
+                            <div class="col-sm-6 col-md-4 col-xl-3">
+                                <div class="card h-100 border">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <h6 class="fw-bold mb-0">@table.TableNumber</h6>
+                                                <small class="text-muted">@table.Section?.Name</small>
+                                            </div>
+                                            <span class="badge bg-@StatusBadge(table.Status)">@table.Status</span>
+                                        </div>
+                                        <div class="small text-muted mb-3">
+                                            <i class="bi bi-people me-1"></i>@table.Capacity seats
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-1 mb-2">
+                                            @foreach (TableStatus s in Enum.GetValues(typeof(TableStatus)))
+                                            {
+                                                <form asp-action="UpdateStatus" method="post" class="d-inline">
+                                                    <input type="hidden" name="id" value="@table.Id" />
+                                                    <input type="hidden" name="status" value="@s" />
+                                                    <button type="submit" class="btn btn-sm @(table.Status == s ? "btn-dark" : "btn-outline-secondary")" style="font-size:0.65rem;padding:2px 6px;" title="Set @s">@s.ToString().Substring(0, Math.Min(3, s.ToString().Length))</button>
+                                                </form>
+                                            }
+                                        </div>
+                                        <div class="d-flex gap-1">
+                                            <a href="/Admin/Tables/Edit/@table.Id" class="btn btn-sm btn-outline-primary flex-grow-1">Edit</a>
+                                            <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Delete table @table.TableNumber?')">
+                                                <input type="hidden" name="id" value="@table.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Add Section</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="CreateSection" method="post">
+                    <div class="mb-3">
+                        <label class="form-label">Section Name</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Ground Floor, Rooftop" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <input type="text" name="description" class="form-control" placeholder="Optional" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Create Section</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-body">
+                <h6 class="fw-bold mb-2">Status Legend</h6>
+                <div class="small">
+                    <div class="mb-1"><span class="badge bg-success me-1">Available</span> Ready for guests</div>
+                    <div class="mb-1"><span class="badge bg-danger me-1">Occupied</span> Guests seated</div>
+                    <div class="mb-1"><span class="badge bg-warning text-dark me-1">Reserved</span> Booked ahead</div>
+                    <div><span class="badge bg-info text-dark me-1">Cleaning</span> Being cleaned</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

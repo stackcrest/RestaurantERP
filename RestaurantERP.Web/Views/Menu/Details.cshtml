@@ -1,0 +1,168 @@
+@model RestaurantERP.Domain.Entities.MenuItem
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<section class="py-5">
+    <div class="container">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Home</a></li>
+                <li class="breadcrumb-item"><a href="/Menu" class="text-decoration-none">Menu</a></li>
+                <li class="breadcrumb-item active">@Model.Name</li>
+            </ol>
+        </nav>
+        
+        <div class="row g-5">
+            <div class="col-lg-6">
+                <div class="card border-0 overflow-hidden">
+                    <img src="@(Model.ImageUrl ?? AppContent.Get("menu.item.fallback_image"))" 
+                         class="img-fluid rounded-4" style="width: 100%; height: 400px; object-fit: cover;" alt="@Model.Name">
+                </div>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <span class="@(Model.IsVeg ? "veg-badge" : "nonveg-badge")"></span>
+                    <span class="badge bg-light text-dark">@Model.Category.Name</span>
+                    @if (Model.IsFeatured)
+                    {
+                        <span class="badge bg-warning text-dark">Featured</span>
+                    }
+                </div>
+                
+                <h1 class="fw-bold mb-3">@Model.Name</h1>
+                
+                <div class="d-flex align-items-center gap-4 mb-4">
+                    <span class="h3 fw-bold text-primary mb-0">₹@Model.BasePrice</span>
+                    <span class="text-warning">
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-half"></i>
+                        <span class="text-dark ms-1">@Model.AverageRating.ToString("N1")</span>
+                        <span class="text-muted">(@Model.ReviewCount reviews)</span>
+                    </span>
+                </div>
+                
+                <p class="text-muted mb-4">@Model.Description</p>
+                
+                <div class="d-flex gap-4 mb-4">
+                    <div>
+                        <i class="bi bi-clock text-primary me-2"></i>
+                        <span>@Model.PreparationTimeMinutes min prep time</span>
+                    </div>
+                    <div>
+                        <i class="bi bi-fire text-primary me-2"></i>
+                        <span>@Model.SpiceLevel spice level</span>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    var canPlaceOrders = ViewBag.CanPlaceOrders as bool? ?? true;
+                    if (canPlaceOrders)
+                    {
+                    <form asp-controller="Cart" asp-action="Add" method="post">
+                        <input type="hidden" name="menuItemId" value="@Model.Id" />
+
+                        @if (Model.Variants.Any())
+                        {
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3">Select Size</h6>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    @foreach (var variant in Model.Variants)
+                                    {
+                                        <label class="btn btn-outline-primary">
+                                            <input type="radio" name="variantId" value="@variant.Id" class="d-none" 
+                                                   @(variant.IsDefault ? "checked" : "")>
+                                            @variant.Name (+₹@variant.PriceAdjustment)
+                                        </label>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @if (Model.MenuItemAddOns.Any())
+                        {
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3">Add Extras</h6>
+                                @foreach (var ma in Model.MenuItemAddOns)
+                                {
+                                    <label class="d-flex align-items-center justify-content-between p-3 border rounded-3 mb-2 cursor-pointer">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <input type="checkbox" name="addOnIds" value="@ma.AddOn.Id" class="form-check-input">
+                                            <span>@ma.AddOn.Name</span>
+                                        </div>
+                                        <span class="text-muted">+₹@ma.AddOn.Price</span>
+                                    </label>
+                                }
+                            </div>
+                        }
+
+                        <div class="d-flex align-items-center gap-4 mb-4">
+                            <span class="fw-bold">Quantity</span>
+                            <div class="d-flex align-items-center gap-3">
+                                <button type="button" class="btn btn-outline-secondary rounded-circle" onclick="changeQty(-1)" style="width: 45px; height: 45px;">
+                                    <i class="bi bi-dash"></i>
+                                </button>
+                                <input type="number" name="quantity" value="1" min="1" max="10" id="qty" 
+                                       class="form-control text-center fw-bold" style="width: 60px;" readonly>
+                                <button type="button" class="btn btn-primary rounded-circle" onclick="changeQty(1)" style="width: 45px; height: 45px;">
+                                    <i class="bi bi-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100" @(Model.IsAvailable ? "" : "disabled")>
+                            <i class="bi bi-cart-plus me-2"></i>@(Model.IsAvailable ? "Add to Cart" : "Currently Unavailable")
+                        </button>
+                    </form>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning border-0">
+                            <i class="bi bi-shield-lock me-2"></i>
+                            Admin and SuperAdmin accounts cannot place customer orders. Use the Admin or POS panel instead.
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="alert alert-light border">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <a href="/Account/Login" class="fw-bold text-primary">Login</a> or 
+                        <a href="/Account/Register" class="fw-bold text-primary">Sign up</a> to order this item
+                    </div>
+                    <a href="/Account/Login" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Login to Order
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+<script>
+    function changeQty(delta) {
+        const input = document.getElementById('qty');
+        let val = parseInt(input.value) + delta;
+        if (val >= 1 && val <= 10) input.value = val;
+    }
+    
+    document.querySelectorAll('input[name="variantId"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.querySelectorAll('input[name="variantId"]').forEach(r => {
+                r.closest('label').classList.remove('btn-primary');
+                r.closest('label').classList.add('btn-outline-primary');
+            });
+            this.closest('label').classList.remove('btn-outline-primary');
+            this.closest('label').classList.add('btn-primary');
+        });
+    });
+</script>
+}

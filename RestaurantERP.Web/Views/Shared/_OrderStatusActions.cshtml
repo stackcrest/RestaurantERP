@@ -1,0 +1,47 @@
+@model RestaurantERP.Domain.Entities.Order
+@using RestaurantERP.Application.Common
+@using RestaurantERP.Domain.Enums
+@{
+    var areaPrefix = ViewBag.AreaPrefix as string ?? "/Admin";
+    var orderArea = ViewBag.OrderArea as string ?? "Admin";
+    var nextStatuses = OrderStatusHelper.GetNextStatuses(Model.OrderType, Model.Status);
+    var actionLabels = new Dictionary<OrderStatus, (string Label, string BtnClass)>
+    {
+        [OrderStatus.Confirmed] = ("Confirm Order", "btn-primary"),
+        [OrderStatus.Preparing] = ("Start Preparing", "btn-warning"),
+        [OrderStatus.Ready] = ("Mark Ready", "btn-info"),
+        [OrderStatus.OutForDelivery] = ("Out for Delivery", "btn-info"),
+        [OrderStatus.Served] = ("Mark Served", "btn-success"),
+        [OrderStatus.Delivered] = ("Mark Delivered", "btn-success"),
+        [OrderStatus.Completed] = ("Mark Completed", "btn-success"),
+        [OrderStatus.Cancelled] = ("Cancel Order", "btn-outline-danger")
+    };
+}
+
+@if (Model.Status != OrderStatus.Completed && Model.Status != OrderStatus.Cancelled)
+{
+    <div class="card">
+        <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold">Update Order Status</h6>
+        </div>
+        <div class="card-body">
+            <form asp-area="@orderArea" asp-controller="Orders" asp-action="UpdateStatus" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <div class="mb-3">
+                    <label class="form-label small text-muted">Note (optional)</label>
+                    <input type="text" name="note" class="form-control form-control-sm" placeholder="e.g. Rider assigned, ready at counter" />
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    @foreach (var status in nextStatuses)
+                    {
+                        var (label, btnClass) = actionLabels[status];
+                        <button type="submit" name="status" value="@status" class="btn @btnClass"
+                                @(status == OrderStatus.Cancelled ? "onclick=\"return confirm('Cancel this order?')\"" : "")>
+                            @label
+                        </button>
+                    }
+                </div>
+            </form>
+        </div>
+    </div>
+}

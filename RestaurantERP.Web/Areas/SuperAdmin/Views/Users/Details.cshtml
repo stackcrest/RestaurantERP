@@ -1,0 +1,105 @@
+@model RestaurantERP.Domain.Entities.ApplicationUser
+@{
+    ViewData["Title"] = Model.FullName;
+    var userRoles = ViewBag.UserRoles as IList<string>;
+    var allRoles = ViewBag.AllRoles as List<Microsoft.AspNetCore.Identity.IdentityRole<Guid>>;
+    var isLocked = Model.LockoutEnd.HasValue && Model.LockoutEnd > DateTime.UtcNow;
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="/SuperAdmin/Users" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i> All Users</a>
+    <a href="/SuperAdmin/Users/Edit/@Model.Id" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i> Edit User</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">User Details</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Full Name:</strong> @Model.FullName</p>
+                        <p><strong>Email:</strong> @Model.Email</p>
+                        <p><strong>Phone:</strong> @(Model.PhoneNumber ?? "N/A")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Loyalty Points:</strong> @Model.LoyaltyPoints</p>
+                        <p><strong>Created:</strong> @Model.CreatedAt.ToString("MMMM dd, yyyy")</p>
+                        <p><strong>Address:</strong> @(Model.Address ?? "N/A")</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Manage Roles</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    @foreach (var role in userRoles ?? new List<string>())
+                    {
+                        var badgeClass = role switch { "SuperAdmin" => "bg-danger", "Admin" => "bg-primary", _ => "bg-secondary" };
+                        <span class="badge @badgeClass fs-6 d-flex align-items-center gap-2">
+                            @role
+                            <form asp-action="RemoveRole" method="post" class="d-inline">
+                                <input type="hidden" name="userId" value="@Model.Id" />
+                                <input type="hidden" name="role" value="@role" />
+                                <button type="submit" class="btn btn-sm p-0 text-white" onclick="return confirm('Remove this role?')">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </form>
+                        </span>
+                    }
+                </div>
+                
+                <form asp-action="AddRole" method="post" class="d-flex gap-2">
+                    <input type="hidden" name="userId" value="@Model.Id" />
+                    <select name="role" class="form-select" style="width: auto;">
+                        @foreach (var role in allRoles ?? new())
+                        {
+                            if (!userRoles!.Contains(role.Name!))
+                            {
+                                <option value="@role.Name">@role.Name</option>
+                            }
+                        }
+                    </select>
+                    <button type="submit" class="btn btn-primary">Add Role</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Account Actions</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="ToggleLock" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <button type="submit" class="btn @(isLocked ? "btn-success" : "btn-warning") w-100 mb-2">
+                        <i class="bi bi-@(isLocked ? "unlock" : "lock") me-1"></i>
+                        @(isLocked ? "Unlock Account" : "Lock Account")
+                    </button>
+                </form>
+                
+                <div class="alert @(isLocked ? "alert-danger" : "alert-success") small mt-3">
+                    <i class="bi bi-@(isLocked ? "exclamation-triangle" : "check-circle") me-1"></i>
+                    Account is @(isLocked ? "LOCKED" : "ACTIVE")
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

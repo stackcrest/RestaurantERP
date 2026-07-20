@@ -1,0 +1,88 @@
+@model List<RestaurantERP.Domain.Entities.ContactInquiry>
+@using RestaurantERP.Domain.Enums
+@{
+    ViewData["Title"] = "Contact Inquiries";
+    Layout = "~/Areas/Admin/Views/Shared/_AdminLayout.cshtml";
+    var counts = ViewBag.StatusCounts as Dictionary<ContactInquiryStatus, int> ?? new();
+    var currentStatus = ViewBag.CurrentStatus as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <p class="text-muted mb-0">View and manage messages submitted from the public contact form.</p>
+    @if (User.IsInRole("SuperAdmin"))
+    {
+        <a href="/SuperAdmin/Application?section=Contact" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-sliders me-1"></i> Edit Contact Page Content
+        </a>
+    }
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-4">
+    <a href="/Admin/Contact" class="btn btn-sm @(string.IsNullOrEmpty(currentStatus) ? "btn-primary" : "btn-outline-primary")">
+        All <span class="badge bg-light text-dark ms-1">@counts.Values.Sum()</span>
+    </a>
+    @foreach (ContactInquiryStatus status in Enum.GetValues(typeof(ContactInquiryStatus)))
+    {
+        var active = currentStatus == status.ToString();
+        var badgeClass = status switch
+        {
+            ContactInquiryStatus.New => "bg-danger",
+            ContactInquiryStatus.InProgress => "bg-warning text-dark",
+            ContactInquiryStatus.Resolved => "bg-success",
+            _ => "bg-secondary"
+        };
+        <a href="/Admin/Contact?status=@status" class="btn btn-sm @(active ? "btn-primary" : "btn-outline-primary")">
+            @status <span class="badge @badgeClass ms-1">@counts.GetValueOrDefault(status)</span>
+        </a>
+    }
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Name</th>
+                    <th>Subject</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">No contact inquiries found.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var item in Model)
+                    {
+                        var statusClass = item.Status switch
+                        {
+                            ContactInquiryStatus.New => "bg-danger",
+                            ContactInquiryStatus.InProgress => "bg-warning text-dark",
+                            ContactInquiryStatus.Resolved => "bg-success",
+                            _ => "bg-secondary"
+                        };
+                        <tr class="@(item.Status == ContactInquiryStatus.New ? "table-warning" : "")">
+                            <td class="small text-muted">@item.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
+                            <td class="fw-semibold">@item.Name</td>
+                            <td>@item.Subject</td>
+                            <td><a href="mailto:@item.Email">@item.Email</a></td>
+                            <td><span class="badge @statusClass">@item.Status</span></td>
+                            <td>
+                                <a href="/Admin/Contact/Details/@item.Id" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye me-1"></i>View
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

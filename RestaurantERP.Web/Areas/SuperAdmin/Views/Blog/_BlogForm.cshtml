@@ -1,0 +1,65 @@
+@model RestaurantERP.Domain.Entities.BlogPost?
+
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="mb-3">
+            <label class="form-label fw-medium">Title</label>
+            <input type="text" name="title" id="blogTitle" class="form-control" value="@Model?.Title" required maxlength="200" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-medium">URL Slug</label>
+            <div class="input-group">
+                <span class="input-group-text">/Blog/Post/</span>
+                <input type="text" name="slug" id="blogSlug" class="form-control" value="@Model?.Slug" placeholder="auto-generated-from-title" />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-medium">Summary <span class="text-muted fw-normal">(shown on listing cards)</span></label>
+            <textarea name="summary" class="form-control" rows="2" maxlength="500">@Model?.Summary</textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-medium">Content</label>
+            <textarea name="content" id="blogContent" class="form-control">@Html.Raw(Model?.Content)</textarea>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="mb-3">
+            <label class="form-label fw-medium">Status</label>
+            <select name="status" class="form-select">
+                @if (Model?.Status == PageStatus.Published)
+                {
+                    <option value="Draft">Draft</option>
+                    <option value="Published" selected>Published</option>
+                }
+                else
+                {
+                    <option value="Draft" selected>Draft</option>
+                    <option value="Published">Published</option>
+                }
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-medium">Featured Image</label>
+            @if (!string.IsNullOrEmpty(Model?.FeaturedImageUrl))
+            {
+                <img src="@Model.FeaturedImageUrl" id="imagePreview" class="img-fluid rounded mb-2 border" alt="Featured" />
+            }
+            else
+            {
+                <img src="" id="imagePreview" class="img-fluid rounded mb-2 border d-none" alt="Featured" />
+            }
+            <input type="file" name="featuredImage" id="featuredImage" class="form-control mb-2" accept="image/*" />
+            <label class="form-label small text-muted">Or image URL</label>
+            <input type="url" name="featuredImageUrl" id="featuredImageUrl" class="form-control" value="@Model?.FeaturedImageUrl" placeholder="https://..." />
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-medium">Meta Description</label>
+            <textarea name="metaDescription" class="form-control" rows="3" maxlength="300">@Model?.MetaDescription</textarea>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-medium">Tags</label>
+            <input type="text" name="tags" class="form-control" value="@Model?.Tags" placeholder="food, recipes, news" />
+            <small class="text-muted">Comma-separated</small>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,28 @@
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IWhatsAppIntegrationService WhatsApp
+@{
+    if (!SignInManager.IsSignedIn(User) || !WhatsApp.IsEnabled()) { return; }
+
+    var waUser = await UserManager.GetUserAsync(User);
+    if (waUser == null) { return; }
+
+    var waRoles = await UserManager.GetRolesAsync(waUser);
+    var waIsStaff = waRoles.Contains("Admin") || waRoles.Contains("SuperAdmin");
+    if (waIsStaff) { return; }
+
+    var waUrl = WhatsApp.GetSupportChatUrl(waUser.FullName, waUser.Email, AppContent.Get("site.name"));
+    if (string.IsNullOrEmpty(waUrl)) { return; }
+
+    var waLabel = AppContent.Get("integrations.whatsapp.button_label", "Chat on WhatsApp");
+    var waContextUrl = ViewBag.WhatsAppUrl as string;
+    var chatUrl = !string.IsNullOrEmpty(waContextUrl) ? waContextUrl : waUrl;
+}
+
+<div id="whatsappFloat" class="position-fixed">
+    <a href="@chatUrl" target="_blank" rel="noopener noreferrer" aria-label="@waLabel" title="@waLabel">
+        <span class="wa-label">@waLabel</span>
+        <i class="bi bi-whatsapp"></i>
+    </a>
+</div>

@@ -1,0 +1,99 @@
+@model RestaurantERP.Domain.Entities.MenuItem
+@{
+    ViewData["Title"] = "Edit Menu Item";
+    var categories = ViewBag.Categories as List<RestaurantERP.Domain.Entities.Category>;
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body p-4">
+                <form asp-action="Edit" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Name *</label>
+                            <input type="text" name="name" class="form-control" value="@Model.Name" required />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Price (₹) *</label>
+                            <input type="number" name="basePrice" class="form-control" value="@Model.BasePrice" step="0.01" required />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="3">@Model.Description</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Category *</label>
+                            <select name="categoryId" class="form-select" required>
+                                @foreach (var cat in categories ?? new())
+                                {
+                                    if (cat.Id == Model.CategoryId)
+                                    {
+                                        <option value="@cat.Id" selected>@cat.Name</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@cat.Id">@cat.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Spice Level</label>
+                            <select name="spiceLevel" class="form-select">
+                                @foreach (var level in Enum.GetValues<SpiceLevel>())
+                                {
+                                    if (level == Model.SpiceLevel)
+                                    {
+                                        <option value="@level" selected>@level</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@level">@level</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Preparation Time (minutes)</label>
+                            <input type="number" name="preparationTime" class="form-control" value="@Model.PreparationTimeMinutes" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Image URL</label>
+                            <input type="url" name="imageUrl" class="form-control" value="@Model.ImageUrl" />
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="isVeg" value="true" class="form-check-input" id="isVeg" @(Model.IsVeg ? "checked" : "")>
+                            <label class="form-check-label" for="isVeg">Vegetarian</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="isFeatured" value="true" class="form-check-input" id="isFeatured" @(Model.IsFeatured ? "checked" : "")>
+                            <label class="form-check-label" for="isFeatured">Featured</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="isAvailable" value="true" class="form-check-input" id="isAvailable" @(Model.IsAvailable ? "checked" : "")>
+                            <label class="form-check-label" for="isAvailable">Available</label>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <a href="/Admin/Menu" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,66 @@
+@model RestaurantERP.Domain.Entities.RestaurantTable
+@using RestaurantERP.Domain.Enums
+@{
+    ViewData["Title"] = "Edit Table";
+    var sections = ViewBag.Sections as List<RestaurantERP.Domain.Entities.TableSection> ?? new();
+}
+
+<div class="mb-3">
+    <a href="/Admin/Tables" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Edit Table — @Model.TableNumber</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <div class="mb-3">
+                        <label class="form-label">Table Number / Name</label>
+                        <input type="text" name="tableNumber" class="form-control" value="@Model.TableNumber" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Section</label>
+                        <select name="sectionId" class="form-select" required>
+                            @foreach (var sec in sections)
+                            {
+                                if (sec.Id == Model.SectionId)
+                                {
+                                    <option value="@sec.Id" selected>@sec.Name</option>
+                                }
+                                else
+                                {
+                                    <option value="@sec.Id">@sec.Name</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Capacity (seats)</label>
+                        <input type="number" name="capacity" class="form-control" value="@Model.Capacity" min="1" max="20" />
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            @foreach (TableStatus s in Enum.GetValues(typeof(TableStatus)))
+                            {
+                                if (Model.Status == s)
+                                {
+                                    <option value="@s" selected>@s</option>
+                                }
+                                else
+                                {
+                                    <option value="@s">@s</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,5 @@
+@model RestaurantERP.Domain.Enums.OrderStatus
+@{
+    var badgeClass = RestaurantERP.Application.Common.OrderStatusHelper.GetBadgeClass(Model);
+}
+<span class="badge bg-@badgeClass">@RestaurantERP.Application.Common.OrderStatusHelper.GetLabel(Model)</span>

@@ -1,0 +1,105 @@
+@model List<RestaurantERP.Domain.Entities.BlogPost>
+@{
+    ViewData["Title"] = "Blog Management";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h5 class="fw-bold mb-1">Blog Posts</h5>
+        <p class="text-muted small mb-0">Create and publish articles visible to all visitors</p>
+    </div>
+    <a href="/SuperAdmin/Blog/Create" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i> New Post
+    </a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Post</th>
+                        <th>Status</th>
+                        <th>Published</th>
+                        <th>Author</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var post in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    @if (!string.IsNullOrEmpty(post.FeaturedImageUrl))
+                                    {
+                                        <img src="@post.FeaturedImageUrl" alt="" class="rounded" style="width: 56px; height: 56px; object-fit: cover;" />
+                                    }
+                                    else
+                                    {
+                                        <div class="rounded bg-light d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                                            <i class="bi bi-image text-muted"></i>
+                                        </div>
+                                    }
+                                    <div>
+                                        <div class="fw-medium">@post.Title</div>
+                                        <small class="text-muted">/Blog/Post/@post.Slug</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                @if (post.Status == PageStatus.Published)
+                                {
+                                    <span class="badge bg-success">Published</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Draft</span>
+                                }
+                            </td>
+                            <td class="small text-muted">
+                                @(post.PublishedAt?.ToLocalTime().ToString("dd MMM yyyy") ?? "—")
+                            </td>
+                            <td class="small">@post.AuthorName</td>
+                            <td>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    @if (post.Status == PageStatus.Published)
+                                    {
+                                        <a href="/Blog/Post/@post.Slug" target="_blank" class="btn btn-sm btn-outline-secondary" title="View live">
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    }
+                                    <a href="/SuperAdmin/Blog/Edit/@post.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <form asp-action="TogglePublish" method="post" class="d-inline">
+                                        <input type="hidden" name="id" value="@post.Id" />
+                                        <button type="submit" class="btn btn-sm @(post.Status == PageStatus.Published ? "btn-warning" : "btn-success")">
+                                            @(post.Status == PageStatus.Published ? "Unpublish" : "Publish")
+                                        </button>
+                                    </form>
+                                    <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Delete this post?')">
+                                        <input type="hidden" name="id" value="@post.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-5">
+                                No blog posts yet. <a href="/SuperAdmin/Blog/Create">Create your first post</a>.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

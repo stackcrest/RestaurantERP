@@ -1,0 +1,82 @@
+@{
+    ViewData["Title"] = "Add Custom Content";
+    Layout = "~/Areas/SuperAdmin/Views/Shared/_SuperAdminLayout.cshtml";
+    var sections = ViewBag.Sections as string[] ?? Array.Empty<string>();
+    var defaultSection = ViewBag.DefaultSection as string ?? "Site";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Create Custom Content Item</h6>
+                <small class="text-muted">Use dot-notation keys e.g. <code>home.promo.banner</code></small>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Content Key *</label>
+                            <input type="text" name="contentKey" class="form-control" required placeholder="section.name.field" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Section *</label>
+                            <select name="section" class="form-select" required>
+                                @foreach (var sec in sections)
+                                {
+                                    if (sec == defaultSection)
+                                    {
+                                        <option value="@sec" selected>@sec</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@sec">@sec</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Label *</label>
+                            <input type="text" name="label" class="form-control" required placeholder="Display name in admin" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Type *</label>
+                            <select name="contentType" class="form-select" id="contentType">
+                                @foreach (RestaurantERP.Domain.Enums.AppContentType t in Enum.GetValues(typeof(RestaurantERP.Domain.Enums.AppContentType)))
+                                {
+                                    <option value="@t">@t</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Description</label>
+                            <input type="text" name="description" class="form-control" placeholder="Optional admin hint" />
+                        </div>
+                        <div class="col-12" id="valueField">
+                            <label class="form-label fw-semibold">Value</label>
+                            <textarea name="value" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div class="col-12 d-none" id="uploadField">
+                            <label class="form-label fw-semibold">Upload File</label>
+                            <input type="file" name="upload" class="form-control" accept="image/*,.pdf,.svg,.ico" />
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i> Create</button>
+                        <a href="/SuperAdmin/Application?section=@defaultSection" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('contentType').addEventListener('change', function () {
+            var isFile = this.value === 'Image' || this.value === 'File';
+            document.getElementById('uploadField').classList.toggle('d-none', !isFile);
+        });
+    </script>
+}

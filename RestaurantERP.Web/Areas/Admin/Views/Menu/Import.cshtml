@@ -1,0 +1,90 @@
+@{
+    ViewData["Title"] = "Import Menu from Excel";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h5 class="mb-1">Excel Menu Import</h5>
+        <p class="text-muted mb-0 small">
+            Categories are created or updated automatically from the Excel file — you do not need to add them in Categories first.
+        </p>
+    </div>
+    <a href="/Admin/Menu" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back to Menu</a>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="bi bi-upload me-2"></i>Upload Excel</h6>
+                <form asp-action="Import" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div class="mb-3">
+                        <label class="form-label">Excel file (.xlsx)</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xlsm" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Import Menu
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>How it works</h6>
+                <ol class="small mb-3">
+                    <li>Download the template and fill your menu rows.</li>
+                    <li><strong>Category</strong>, <strong>Name</strong>, and <strong>BasePrice</strong> are required.</li>
+                    <li>If a category name does not exist, it is created automatically.</li>
+                    <li>If a category already exists, it is updated (reactivated if needed).</li>
+                    <li>Existing menu items are matched by <strong>Name</strong> and updated; new names are created.</li>
+                </ol>
+                <a href="/Admin/Menu/DownloadTemplate" class="btn btn-outline-primary">
+                    <i class="bi bi-download me-1"></i> Download Template
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-body">
+        <h6 class="fw-bold mb-2">Expected columns</h6>
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th>Column</th>
+                        <th>Required</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>Category</td><td>Yes</td><td>Creates/updates category by name</td></tr>
+                    <tr><td>Name</td><td>Yes</td><td>Menu item name</td></tr>
+                    <tr><td>BasePrice</td><td>Yes</td><td>Number (₹ symbol optional)</td></tr>
+                    <tr><td>Description</td><td>No</td><td></td></tr>
+                    <tr><td>IsVeg</td><td>No</td><td>Yes/No (default Yes)</td></tr>
+                    <tr><td>SpiceLevel</td><td>No</td><td>Mild, Medium, Hot, ExtraHot</td></tr>
+                    <tr><td>IsFeatured</td><td>No</td><td>Yes/No</td></tr>
+                    <tr><td>IsAvailable</td><td>No</td><td>Yes/No (default Yes)</td></tr>
+                    <tr><td>PreparationTimeMinutes</td><td>No</td><td>Default 15</td></tr>
+                    <tr><td>ImageUrl</td><td>No</td><td></td></tr>
+                    <tr><td>Allergens</td><td>No</td><td></td></tr>
+                    <tr><td>CategoryDisplayOrder</td><td>No</td><td>Order for the category</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,174 @@
+@{
+    ViewData["Title"] = "Delivery Zone";
+    var config = ViewBag.Config as RestaurantERP.Application.Common.DeliveryConfig;
+    var lat = config?.RestaurantLatitude ?? 28.6139;
+    var lng = config?.RestaurantLongitude ?? 77.2090;
+    var radius = config?.RadiusKm ?? 5;
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h5 class="fw-bold mb-1">Delivery Zone Map</h5>
+        <p class="text-muted small mb-0">Set restaurant location and delivery radius directly on the map — drag the pin, drag the circle edge, or click to set radius.</p>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-white py-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+            <div class="btn-group btn-group-sm" role="group" id="mapModeGroup">
+                <button type="button" class="btn btn-outline-primary active" id="mapModeLocation" title="Click map to move restaurant">
+                    <i class="bi bi-geo-alt-fill me-1"></i>Set location
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="mapModeRadius" title="Click map to set radius from pin">
+                    <i class="bi bi-bullseye me-1"></i>Set radius on map
+                </button>
+            </div>
+            <div class="small text-muted text-end">
+                <span id="mapCoords">@lat.ToString("F6"), @lng.ToString("F6")</span>
+                <span class="mx-2">·</span>
+                <span id="mapArea">@radius km radius</span>
+            </div>
+        </div>
+        <p class="small text-primary mb-2" id="mapModeHint">Click the map or drag the pin to set restaurant location.</p>
+        <div class="d-flex flex-wrap gap-2">
+            <input type="text" id="mapSearch" class="form-control form-control-sm flex-grow-1" style="max-width: 420px;" placeholder="Search address or place..." value="@config?.RestaurantAddress" />
+            <button type="button" class="btn btn-sm btn-primary" id="mapSearchBtn"><i class="bi bi-search"></i> Find</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="mapLocateBtn" title="Use my current location">
+                <i class="bi bi-crosshair"></i> My location
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div id="deliveryMap" style="height: 480px; width: 100%;"></div>
+    </div>
+    <div class="card-footer bg-white small text-muted">
+        <i class="bi bi-info-circle me-1"></i>
+        <strong>Blue circle</strong> = delivery zone.
+        Drag the <strong>purple handle</strong> on the circle edge to resize radius, or use <strong>Set radius on map</strong> and click any point.
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0 fw-bold">Zone Settings</h6>
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Save" method="post" id="deliveryForm">
+                    <div class="mb-3">
+                        <label class="form-label">Restaurant Address</label>
+                        <input type="text" name="restaurantAddress" id="restaurantAddress" class="form-control" value="@config?.RestaurantAddress" placeholder="Full restaurant address" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Latitude</label>
+                            <input type="number" name="latitude" id="latitude" class="form-control" step="0.000001" value="@lat" required />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Longitude</label>
+                            <input type="number" name="longitude" id="longitude" class="form-control" step="0.000001" value="@lng" required />
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label d-flex justify-content-between">
+                            <span>Delivery Radius (synced with map)</span>
+                            <span class="fw-bold text-primary" id="radiusLabel">@radius km</span>
+                        </label>
+                        <input type="range" class="form-range mb-2" min="0.5" max="100" step="0.5" id="radiusSlider" value="@radius">
+                        <div class="d-flex align-items-center gap-3 flex-wrap">
+                            <input type="number" name="radiusKm" id="radiusKm" class="form-control" style="max-width: 120px;"
+                                   step="0.5" min="0.5" max="100" value="@radius" required />
+                            <span class="text-muted small">km — also drag the handle on the map circle</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-geo-alt me-1"></i>Save Delivery Zone
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card bg-primary text-white">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-radar me-2"></i>How it works</h5>
+                <ul class="mb-0 opacity-90">
+                    <li class="mb-2"><strong>Set location</strong> — click map or drag the red pin</li>
+                    <li class="mb-2"><strong>Set radius on map</strong> — switch mode, then click where the delivery edge should be</li>
+                    <li class="mb-2"><strong>Drag the purple handle</strong> on the circle edge to resize radius in km</li>
+                    <li class="mb-2">Slider and number field stay synced with the map</li>
+                    <li>Customers outside the zone cannot place delivery orders</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-2">Coverage Summary</h6>
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="text-muted">Center</span>
+                    <span class="fw-medium" id="summaryCoords">@lat.ToString("F4"), @lng.ToString("F4")</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-2">
+                    <span class="text-muted">Radius</span>
+                    <span class="fw-medium"><span id="summaryRadius">@radius</span> km</span>
+                </div>
+                <div class="d-flex justify-content-between small">
+                    <span class="text-muted">Approx. area</span>
+                    <span class="fw-medium" id="summaryArea">~@((Math.PI * radius * radius).ToString("F1")) km²</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+    #deliveryMap { z-index: 1; }
+    .leaflet-container { font-family: inherit; }
+    #deliveryMap.map-mode-radius { cursor: crosshair; }
+    #deliveryMap.map-mode-location { cursor: pointer; }
+    .radius-handle-wrapper { background: transparent; border: none; }
+    .radius-handle {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #6366f1;
+        color: #fff;
+        border: 3px solid #fff;
+        box-shadow: 0 2px 10px rgba(99, 102, 241, 0.55);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        cursor: grab;
+    }
+    .radius-handle:active { cursor: grabbing; }
+    #mapModeGroup .btn.active {
+        background: #6366f1;
+        border-color: #6366f1;
+        color: #fff;
+    }
+</style>
+}
+
+@section Scripts {
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="~/js/delivery-zone-map.js" asp-append-version="true"></script>
+}

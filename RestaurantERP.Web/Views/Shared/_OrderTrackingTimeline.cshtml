@@ -1,0 +1,68 @@
+@model List<RestaurantERP.Application.Interfaces.OrderTrackingStep>
+
+@if (!Model.Any())
+{
+    <p class="text-muted small mb-0">No tracking information available.</p>
+}
+else if (Model.Count == 1 && Model[0].Status == RestaurantERP.Domain.Enums.OrderStatus.Cancelled)
+{
+    <div class="alert alert-danger mb-0">
+        <i class="bi bi-x-circle me-2"></i>
+        <strong>Order Cancelled</strong>
+        @if (Model[0].Timestamp.HasValue)
+        {
+            <span class="d-block small mt-1">@Model[0].Timestamp.Value.ToLocalTime().ToString("dd MMM yyyy, hh:mm tt")</span>
+        }
+        @if (!string.IsNullOrEmpty(Model[0].Note))
+        {
+            <span class="d-block small">@Model[0].Note</span>
+        }
+    </div>
+}
+else
+{
+    <div class="order-tracking-timeline">
+        @for (var i = 0; i < Model.Count; i++)
+        {
+            var step = Model[i];
+            <div class="d-flex gap-3">
+                <div class="d-flex flex-column align-items-center">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center @(step.IsCompleted ? "bg-primary text-white" : "bg-light text-muted")"
+                         style="width: 36px; height: 36px; font-size: 13px;">
+                        @if (step.IsCompleted)
+                        {
+                            <i class="bi bi-check-lg"></i>
+                        }
+                        else
+                        {
+                            @(i + 1)
+                        }
+                    </div>
+                    @if (i < Model.Count - 1)
+                    {
+                        <div class="@(step.IsCompleted ? "bg-primary" : "bg-light")" style="width: 3px; flex: 1; min-height: 28px;"></div>
+                    }
+                </div>
+                <div class="pb-3 flex-grow-1">
+                    <div class="@(step.IsCurrent ? "fw-bold text-primary" : step.IsCompleted ? "text-dark" : "text-muted")">
+                        @step.Label
+                    </div>
+                    @if (step.Timestamp.HasValue)
+                    {
+                        <small class="text-muted d-block">
+                            <i class="bi bi-clock me-1"></i>@step.Timestamp.Value.ToLocalTime().ToString("dd MMM, hh:mm tt")
+                        </small>
+                    }
+                    @if (!string.IsNullOrEmpty(step.UpdatedBy))
+                    {
+                        <small class="text-muted d-block">by @step.UpdatedBy</small>
+                    }
+                    @if (!string.IsNullOrEmpty(step.Note))
+                    {
+                        <small class="text-muted d-block fst-italic">@step.Note</small>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}

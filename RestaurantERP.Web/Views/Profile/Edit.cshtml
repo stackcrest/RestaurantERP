@@ -1,0 +1,157 @@
+@model RestaurantERP.Domain.Entities.ApplicationUser
+@{
+    ViewData["Title"] = "Edit Profile";
+    var hasAvatar = !string.IsNullOrEmpty(Model.AvatarUrl);
+}
+
+@section Styles {
+    <link href="~/css/profile.css" asp-append-version="true" rel="stylesheet" />
+}
+
+<div class="container py-4" style="max-width: 640px;">
+    <div class="d-flex align-items-center mb-4">
+        <a href="/Profile" class="btn btn-light rounded-circle me-3"><i class="bi bi-arrow-left"></i></a>
+        <div>
+            <h1 class="h5 fw-bold mb-0">Edit Profile</h1>
+            <small class="text-muted">Update your photo and personal information</small>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <form asp-action="Edit" method="post" enctype="multipart/form-data" id="profileEditForm">
+        @Html.AntiForgeryToken()
+
+        <!-- Profile photo -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4 text-center">
+                <h6 class="fw-bold mb-3 text-start"><i class="bi bi-camera me-2 text-primary"></i>Profile Photo</h6>
+                <div class="mb-3">
+                    @if (hasAvatar)
+                    {
+                        <img id="avatarPreview" src="@Model.AvatarUrl" alt="Profile" class="avatar-upload-preview" />
+                    }
+                    else
+                    {
+                        <div id="avatarPreviewFallback">
+                            @{
+                                ViewData["AvatarSize"] = 120;
+                            }
+                            <partial name="_ProfileAvatar" model="Model" />
+                        </div>
+                        <img id="avatarPreview" src="" alt="Preview" class="avatar-upload-preview d-none" />
+                    }
+                </div>
+
+                <label for="avatarInput" class="avatar-upload-zone d-block mb-3">
+                    <i class="bi bi-cloud-upload fs-3 text-primary d-block mb-2"></i>
+                    <span class="fw-semibold">Click to upload a photo</span>
+                    <small class="text-muted d-block mt-1">JPG, PNG, WEBP or GIF · Max 5 MB</small>
+                </label>
+                <input type="file" name="avatar" id="avatarInput" class="d-none" accept="image/jpeg,image/png,image/webp,image/gif" />
+
+                @if (hasAvatar)
+                {
+                    <div class="form-check d-inline-block">
+                        <input type="checkbox" name="removeAvatar" value="true" class="form-check-input" id="removeAvatar" />
+                        <label class="form-check-label text-danger small" for="removeAvatar">Remove current photo</label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Personal info -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3"><i class="bi bi-person me-2 text-primary"></i>Personal Information</h6>
+
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Full Name</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-person text-muted"></i></span>
+                        <input type="text" name="fullName" value="@Model.FullName" class="form-control" required />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-envelope text-muted"></i></span>
+                        <input type="email" value="@Model.Email" class="form-control bg-light" disabled />
+                    </div>
+                    <small class="text-muted">Email cannot be changed here</small>
+                </div>
+
+                <div class="mb-0">
+                    <label class="form-label fw-medium">Phone Number</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-telephone text-muted"></i></span>
+                        <input type="tel" name="phoneNumber" value="@Model.PhoneNumber" class="form-control" placeholder="+91 98765 43210" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Address -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3"><i class="bi bi-geo-alt me-2 text-primary"></i>Delivery Address</h6>
+
+                <div class="mb-3">
+                    <label class="form-label fw-medium">Street Address</label>
+                    <textarea name="address" class="form-control" rows="2" placeholder="House no., street, area">@Model.Address</textarea>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-7">
+                        <label class="form-label fw-medium">City</label>
+                        <input type="text" name="city" value="@Model.City" class="form-control" placeholder="City" />
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-medium">Pin Code</label>
+                        <input type="text" name="pinCode" value="@Model.PinCode" class="form-control" placeholder="110001" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill mb-3" id="saveProfileBtn">
+            <i class="bi bi-check-lg me-2"></i>Save Changes
+        </button>
+        <a href="/Profile" class="btn btn-outline-secondary w-100 rounded-pill">Cancel</a>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('avatarInput').addEventListener('change', function (e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image must be under 5 MB.');
+                e.target.value = '';
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                var preview = document.getElementById('avatarPreview');
+                preview.src = ev.target.result;
+                preview.classList.remove('d-none');
+                var fallback = document.getElementById('avatarPreviewFallback');
+                if (fallback) fallback.classList.add('d-none');
+                var removeCb = document.getElementById('removeAvatar');
+                if (removeCb) removeCb.checked = false;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('profileEditForm').addEventListener('submit', function () {
+            var btn = document.getElementById('saveProfileBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+        });
+    </script>
+}

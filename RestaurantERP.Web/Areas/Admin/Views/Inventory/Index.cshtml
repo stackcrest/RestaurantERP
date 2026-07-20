@@ -1,0 +1,276 @@
+@{
+    ViewData["Title"] = "Inventory";
+    var tab = ViewBag.Tab as string ?? "ingredients";
+    var ingredients = ViewBag.Ingredients as List<RestaurantERP.Domain.Entities.Ingredient> ?? new();
+    var suppliers = ViewBag.Suppliers as List<RestaurantERP.Domain.Entities.Supplier> ?? new();
+    var grns = ViewBag.Grns as List<RestaurantERP.Domain.Entities.GRN> ?? new();
+    var lowStockCount = (int)(ViewBag.LowStockCount ?? 0);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h5 class="fw-bold mb-1">Inventory Management</h5>
+        <p class="text-muted small mb-0">Track ingredients, suppliers, and stock receipts</p>
+    </div>
+    @if (lowStockCount > 0)
+    {
+        <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>@lowStockCount low stock item(s)</span>
+    }
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link @(tab == "ingredients" ? "active" : "")" href="/Admin/Inventory?tab=ingredients">Ingredients</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(tab == "suppliers" ? "active" : "")" href="/Admin/Inventory?tab=suppliers">Suppliers</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(tab == "grn" ? "active" : "")" href="/Admin/Inventory?tab=grn">Stock Receipts</a>
+    </li>
+</ul>
+
+@if (tab == "ingredients")
+{
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">Ingredients Stock</h6>
+                    <span class="badge bg-light text-dark">@ingredients.Count items</span>
+                </div>
+                <div class="card-body p-0">
+                    @if (!ingredients.Any())
+                    {
+                        <div class="text-center py-5 text-muted">No ingredients yet. Add your first item.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Stock</th>
+                                        <th>Unit</th>
+                                        <th>Threshold</th>
+                                        <th>Cost/Unit</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in ingredients)
+                                    {
+                                        var isLow = item.CurrentStock <= item.LowStockThreshold;
+                                        <tr class="@(isLow ? "table-warning" : "")">
+                                            <td class="fw-medium">
+                                                @item.Name
+                                                @if (item.IsPerishable)
+                                                {
+                                                    <span class="badge bg-info text-dark ms-1" style="font-size:0.65rem;">Perishable</span>
+                                                }
+                                            </td>
+                                            <td class="@(isLow ? "text-danger fw-bold" : "")">@item.CurrentStock.ToString("N2")</td>
+                                            <td>@item.Unit</td>
+                                            <td>@item.LowStockThreshold.ToString("N2")</td>
+                                            <td>₹@item.UnitCost.ToString("N2")</td>
+                                            <td>
+                                                @if (isLow)
+                                                {
+                                                    <span class="badge bg-danger">Low Stock</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-success">OK</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <a href="/Admin/Inventory/EditIngredient/@item.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#adjustModal_@item.Id">Adjust</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-white"><h6 class="mb-0 fw-bold">Add Ingredient</h6></div>
+                <div class="card-body">
+                    <form asp-action="CreateIngredient" method="post">
+                        <div class="mb-2">
+                            <label class="form-label small">Name *</label>
+                            <input type="text" name="name" class="form-control form-control-sm" required placeholder="e.g. Chicken, Rice" />
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label small">Unit</label>
+                                <input type="text" name="unit" class="form-control form-control-sm" value="kg" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Initial Stock</label>
+                                <input type="number" name="initialStock" class="form-control form-control-sm" step="0.01" value="0" />
+                            </div>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label small">Low Stock Alert</label>
+                                <input type="number" name="lowStockThreshold" class="form-control form-control-sm" step="0.01" value="10" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Cost/Unit (₹)</label>
+                                <input type="number" name="unitCost" class="form-control form-control-sm" step="0.01" value="0" />
+                            </div>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input type="checkbox" name="isPerishable" value="true" class="form-check-input" id="isPerishable" />
+                            <label class="form-check-label small" for="isPerishable">Perishable</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">Add Ingredient</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @foreach (var item in ingredients)
+    {
+        <div class="modal fade" id="adjustModal_@item.Id" tabindex="-1">
+            <div class="modal-dialog modal-sm">
+                <div class="modal-content">
+                    <form asp-action="AdjustStock" method="post">
+                        <input type="hidden" name="id" value="@item.Id" />
+                        <div class="modal-header">
+                            <h6 class="modal-title">Adjust — @item.Name</h6>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="small text-muted mb-2">Current: @item.CurrentStock @item.Unit</p>
+                            <label class="form-label small">Quantity (+ add / − remove)</label>
+                            <input type="number" name="quantity" class="form-control" step="0.01" required placeholder="e.g. 5 or -2" />
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary btn-sm">Update Stock</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+}
+else if (tab == "suppliers")
+{
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Name</th>
+                                <th>Contact</th>
+                                <th>Phone</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!suppliers.Any())
+                            {
+                                <tr><td colspan="5" class="text-center text-muted py-4">No suppliers yet</td></tr>
+                            }
+                            @foreach (var s in suppliers)
+                            {
+                                <tr>
+                                    <td class="fw-medium">@s.Name</td>
+                                    <td>@(s.ContactPerson ?? "—")</td>
+                                    <td>@(s.Phone ?? "—")</td>
+                                    <td>@(s.Email ?? "—")</td>
+                                    <td><span class="badge @(s.IsActive ? "bg-success" : "bg-secondary")">@(s.IsActive ? "Active" : "Inactive")</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-white"><h6 class="mb-0 fw-bold">Add Supplier</h6></div>
+                <div class="card-body">
+                    <form asp-action="CreateSupplier" method="post">
+                        <div class="mb-2">
+                            <label class="form-label small">Name *</label>
+                            <input type="text" name="name" class="form-control form-control-sm" required />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Contact Person</label>
+                            <input type="text" name="contactPerson" class="form-control form-control-sm" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small">Phone</label>
+                            <input type="text" name="phone" class="form-control form-control-sm" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">Email</label>
+                            <input type="email" name="email" class="form-control form-control-sm" />
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">Add Supplier</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="fw-bold mb-0">Goods Received Notes (GRN)</h6>
+        <a href="/Admin/Inventory/CreateGrn" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Receive Stock</a>
+    </div>
+    <div class="card">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>GRN #</th>
+                        <th>Supplier</th>
+                        <th>Date</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!grns.Any())
+                    {
+                        <tr><td colspan="5" class="text-center text-muted py-4">No stock receipts yet</td></tr>
+                    }
+                    @foreach (var g in grns)
+                    {
+                        <tr>
+                            <td class="fw-medium">@g.GRNNumber</td>
+                            <td>@g.Supplier?.Name</td>
+                            <td class="small">@g.ReceivedDate.ToLocalTime().ToString("dd MMM yyyy")</td>
+                            <td>@g.Items.Count</td>
+                            <td class="fw-bold">₹@g.TotalAmount.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

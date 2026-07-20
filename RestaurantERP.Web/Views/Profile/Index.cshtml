@@ -1,0 +1,280 @@
+@model RestaurantERP.Domain.Entities.ApplicationUser
+@{
+    ViewData["Title"] = "My Profile";
+    var roles = ViewBag.Roles as IList<string> ?? new List<string>();
+    var isAdmin = roles.Contains("Admin") || roles.Contains("SuperAdmin");
+    var isSuperAdmin = roles.Contains("SuperAdmin");
+    var isCustomer = !isAdmin;
+    var orderCount = (int)(ViewBag.OrderCount ?? 0);
+    var completedOrders = (int)(ViewBag.CompletedOrders ?? 0);
+    var memberSince = ViewBag.MemberSince as DateTime? ?? Model.CreatedAt;
+    var roleLabel = isSuperAdmin ? "Super Admin" : isAdmin ? "Administrator" : "Customer";
+}
+
+@section Styles {
+    <link href="~/css/profile.css" asp-append-version="true" rel="stylesheet" />
+}
+
+<div class="profile-hero">
+    <div class="container text-center text-white">
+        <small class="opacity-75 text-uppercase letter-spacing-1">Account</small>
+        <h1 class="h4 fw-bold mb-0 mt-1">My Profile</h1>
+    </div>
+</div>
+
+<div class="container profile-hero-card pb-5">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+            @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Profile header card -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-4 p-md-5">
+            <div class="row align-items-center g-4">
+                <div class="col-auto text-center">
+                    <div class="profile-avatar-wrap">
+                        <div class="avatar-ring">
+                            @{
+                                ViewData["AvatarSize"] = 110;
+                            }
+                            <partial name="_ProfileAvatar" model="Model" />
+                        </div>
+                    </div>
+                    <a href="/Profile/Edit" class="btn btn-sm btn-outline-primary mt-3 rounded-pill px-3">
+                        <i class="bi bi-camera me-1"></i> Change Photo
+                    </a>
+                </div>
+                <div class="col">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                        <h2 class="h4 fw-bold mb-0">@Model.FullName</h2>
+                        <span class="badge bg-primary-subtle text-primary">@roleLabel</span>
+                    </div>
+                    <p class="text-muted mb-2"><i class="bi bi-envelope me-2"></i>@Model.Email</p>
+                    @if (!string.IsNullOrEmpty(Model.PhoneNumber))
+                    {
+                        <p class="text-muted mb-2"><i class="bi bi-telephone me-2"></i>@Model.PhoneNumber</p>
+                    }
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <span class="badge rounded-pill bg-warning-subtle text-warning-emphasis px-3 py-2">
+                            <i class="bi bi-star-fill me-1"></i>@Model.LoyaltyPoints Loyalty Points
+                        </span>
+                        <span class="badge rounded-pill bg-light text-muted px-3 py-2">
+                            <i class="bi bi-calendar3 me-1"></i>Member since @memberSince.ToLocalTime().ToString("MMM yyyy")
+                        </span>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-auto">
+                    <a href="/Profile/Edit" class="btn btn-primary rounded-pill px-4">
+                        <i class="bi bi-pencil-square me-2"></i>Edit Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    @if (isCustomer)
+    {
+        <div class="row g-3 mb-4">
+            <div class="col-4">
+                <div class="card profile-stat h-100">
+                    <div class="card-body d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-bag-check"></i>
+                        </div>
+                        <div>
+                            <div class="h5 fw-bold mb-0">@orderCount</div>
+                            <small class="text-muted">Total Orders</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card profile-stat h-100">
+                    <div class="card-body d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-check-circle"></i>
+                        </div>
+                        <div>
+                            <div class="h5 fw-bold mb-0">@completedOrders</div>
+                            <small class="text-muted">Completed</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="card profile-stat h-100">
+                    <div class="card-body d-flex align-items-center gap-3 p-3">
+                        <div class="stat-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-star"></i>
+                        </div>
+                        <div>
+                            <div class="h5 fw-bold mb-0">@Model.LoyaltyPoints</div>
+                            <small class="text-muted">Points</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Account details -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-person-vcard me-2 text-primary"></i>Account Details</h6>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <div class="profile-info-row">
+                        <i class="bi bi-person text-muted"></i>
+                        <div>
+                            <small class="text-muted d-block">Full Name</small>
+                            <span class="fw-medium">@Model.FullName</span>
+                        </div>
+                    </div>
+                    <div class="profile-info-row">
+                        <i class="bi bi-envelope text-muted"></i>
+                        <div>
+                            <small class="text-muted d-block">Email</small>
+                            <span class="fw-medium">@Model.Email</span>
+                        </div>
+                    </div>
+                    <div class="profile-info-row">
+                        <i class="bi bi-telephone text-muted"></i>
+                        <div>
+                            <small class="text-muted d-block">Phone</small>
+                            <span class="fw-medium">@(Model.PhoneNumber ?? "Not set")</span>
+                        </div>
+                    </div>
+                    <div class="profile-info-row">
+                        <i class="bi bi-shield-check text-muted"></i>
+                        <div>
+                            <small class="text-muted d-block">Account Status</small>
+                            <span class="badge bg-success-subtle text-success">@(Model.IsActive ? "Active" : "Inactive")</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Address -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-geo-alt me-2 text-primary"></i>Delivery Address</h6>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    @if (string.IsNullOrEmpty(Model.Address) && string.IsNullOrEmpty(Model.City))
+                    {
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-house-add fs-2 d-block mb-2 opacity-50"></i>
+                            <p class="mb-2">No address saved yet</p>
+                            <a href="/Profile/Edit" class="btn btn-sm btn-outline-primary">Add Address</a>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="profile-info-row">
+                            <i class="bi bi-house text-muted"></i>
+                            <div>
+                                <small class="text-muted d-block">Street Address</small>
+                                <span class="fw-medium">@(Model.Address ?? "—")</span>
+                            </div>
+                        </div>
+                        <div class="profile-info-row">
+                            <i class="bi bi-building text-muted"></i>
+                            <div>
+                                <small class="text-muted d-block">City</small>
+                                <span class="fw-medium">@(Model.City ?? "—")</span>
+                            </div>
+                        </div>
+                        <div class="profile-info-row">
+                            <i class="bi bi-mailbox text-muted"></i>
+                            <div>
+                                <small class="text-muted d-block">Pin Code</small>
+                                <span class="fw-medium">@(Model.PinCode ?? "—")</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick actions -->
+    <h6 class="fw-bold mt-4 mb-3">Quick Actions</h6>
+    <div class="row g-3">
+        @if (isCustomer)
+        {
+            <div class="col-6 col-md-3">
+                <a href="/Orders" class="card profile-action-card h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-receipt fs-3 text-primary d-block mb-2"></i>
+                        <span class="fw-semibold small">Order History</span>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="/Menu" class="card profile-action-card h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-grid fs-3 text-primary d-block mb-2"></i>
+                        <span class="fw-semibold small">Browse Menu</span>
+                    </div>
+                </a>
+            </div>
+        }
+        @if (isAdmin)
+        {
+            <div class="col-6 col-md-3">
+                <a href="/Admin" class="card profile-action-card h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-speedometer2 fs-3 text-primary d-block mb-2"></i>
+                        <span class="fw-semibold small">Admin Panel</span>
+                    </div>
+                </a>
+            </div>
+        }
+        @if (isSuperAdmin)
+        {
+            <div class="col-6 col-md-3">
+                <a href="/SuperAdmin" class="card profile-action-card h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-shield-check fs-3 text-secondary d-block mb-2"></i>
+                        <span class="fw-semibold small">SuperAdmin</span>
+                    </div>
+                </a>
+            </div>
+        }
+        <div class="col-6 col-md-3">
+            <a href="/Profile/Edit" class="card profile-action-card h-100">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-pencil fs-3 text-primary d-block mb-2"></i>
+                    <span class="fw-semibold small">Edit Profile</span>
+                </div>
+            </a>
+        </div>
+        <div class="col-6 col-md-3">
+            <form asp-controller="Account" asp-action="Logout" method="post" class="h-100">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="card profile-action-card h-100 w-100 border-0 bg-white">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-box-arrow-right fs-3 text-danger d-block mb-2"></i>
+                        <span class="fw-semibold small text-danger">Logout</span>
+                    </div>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

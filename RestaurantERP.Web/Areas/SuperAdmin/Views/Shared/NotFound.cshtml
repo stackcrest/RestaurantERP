@@ -1,0 +1,15 @@
+@model RestaurantERP.Web.Models.ErrorViewModel
+@{
+    ViewData["Title"] = Model.Title;
+    Layout = "~/Areas/SuperAdmin/Views/Shared/_SuperAdminLayout.cshtml";
+}
+
+<div class="text-center py-5">
+    <div class="display-4 text-muted fw-bold">@(Model.StatusCode == 404 ? "404" : Model.StatusCode)</div>
+    <h1 class="h4 fw-bold mb-3">@Model.Title</h1>
+    <p class="text-muted mb-4">@Model.Message</p>
+    <div class="d-flex gap-2 justify-content-center">
+        <a href="/SuperAdmin" class="btn btn-primary">Dashboard</a>
+        <button type="button" class="btn btn-outline-secondary" onclick="history.back()">Go Back</button>
+    </div>
+</div>

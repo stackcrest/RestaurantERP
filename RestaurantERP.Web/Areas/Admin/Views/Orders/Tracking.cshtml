@@ -1,0 +1,86 @@
+@model List<RestaurantERP.Domain.Entities.Order>
+@using RestaurantERP.Application.Common
+@using RestaurantERP.Domain.Enums
+@{
+    ViewData["Title"] = "Order Tracking Board";
+    var currentType = ViewBag.CurrentType as string;
+    var areaPrefix = ViewBag.AreaPrefix as string ?? "/Admin";
+
+    var boardColumns = new[]
+    {
+        OrderStatus.Placed,
+        OrderStatus.Confirmed,
+        OrderStatus.Preparing,
+        OrderStatus.Ready,
+        OrderStatus.OutForDelivery,
+        OrderStatus.Served,
+        OrderStatus.Delivered
+    };
+
+    var ordersByStatus = Model.GroupBy(o => o.Status).ToDictionary(g => g.Key, g => g.ToList());
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h5 class="fw-bold mb-1">Order Tracking Board</h5>
+        <p class="text-muted small mb-0">Live pipeline view — drag-free status columns</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="@areaPrefix/Orders" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list me-1"></i>List View</a>
+        <div class="btn-group">
+            <a href="@areaPrefix/Orders/Tracking" class="btn btn-sm @(string.IsNullOrEmpty(currentType) ? "btn-dark" : "btn-outline-dark")">All</a>
+            <a href="@areaPrefix/Orders/Tracking?type=Delivery" class="btn btn-sm @(currentType == "Delivery" ? "btn-dark" : "btn-outline-dark")">Delivery</a>
+            <a href="@areaPrefix/Orders/Tracking?type=DineIn" class="btn btn-sm @(currentType == "DineIn" ? "btn-dark" : "btn-outline-dark")">Dine In</a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 flex-nowrap overflow-auto pb-3" style="min-height: 420px;">
+    @foreach (var column in boardColumns)
+    {
+        ordersByStatus.TryGetValue(column, out var columnOrders);
+        columnOrders ??= new();
+        <div class="col" style="min-width: 220px;">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold small">@OrderStatusHelper.GetLabel(column)</span>
+                    <span class="badge bg-secondary rounded-pill">@columnOrders.Count</span>
+                </div>
+                <div class="card-body p-2 d-flex flex-column gap-2" style="max-height: 520px; overflow-y: auto;">
+                    @if (!columnOrders.Any())
+                    {
+                        <div class="text-center text-muted small py-4">No orders</div>
+                    }
+                    @foreach (var order in columnOrders)
+                    {
+                        <a href="@areaPrefix/Orders/Details/@order.Id" class="text-decoration-none">
+                            <div class="card border mb-0">
+                                <div class="card-body p-2">
+                                    <div class="fw-semibold small text-dark">@order.OrderNumber</div>
+                                    <div class="text-muted small text-truncate">@order.User.FullName</div>
+                                    <div class="d-flex justify-content-between align-items-center mt-1">
+                                        <span class="badge bg-light text-dark" style="font-size: 0.65rem;">@order.OrderType</span>
+                                        <span class="fw-bold small text-primary">₹@order.TotalAmount.ToString("N0")</span>
+                                    </div>
+                                    @if (order.OrderType == OrderType.Delivery && !string.IsNullOrEmpty(order.DeliveryAddress))
+                                    {
+                                        <div class="text-muted small text-truncate mt-1" title="@order.DeliveryAddress">
+                                            <i class="bi bi-geo-alt"></i> @order.DeliveryAddress
+                                        </div>
+                                    }
+                                    <div class="text-muted" style="font-size: 0.7rem;">@order.CreatedAt.ToLocalTime().ToString("hh:mm tt")</div>
+                                </div>
+                            </div>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+    setTimeout(() => location.reload(), 60000);
+</script>
+}

@@ -1,0 +1,123 @@
+@{
+    ViewData["Title"] = "Menu Access Management";
+    var selectedRole = ViewBag.SelectedRole as string ?? "Admin";
+    var roles = ViewBag.Roles as List<Microsoft.AspNetCore.Identity.IdentityRole<Guid>>;
+    var sections = ViewBag.Sections as IReadOnlyList<(string Key, string Name, string Icon)>;
+    var access = ViewBag.Access as Dictionary<string, (bool CanRead, bool CanWrite)> ?? new();
+}
+
+<div class="mb-4">
+    <p class="text-muted mb-0">
+        Control which admin panel sections each role can <strong>view (Read)</strong> or <strong>modify (Write)</strong>.
+        SuperAdmin always has full access.
+    </p>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-medium">Select Role</label>
+                <select name="role" class="form-select" onchange="this.form.submit()">
+                    @foreach (var r in roles ?? new())
+                    {
+                        if (r.Name == selectedRole)
+                        {
+                            <option value="@r.Name" selected>@r.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@r.Name">@r.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold">Access for <span class="text-primary">@selectedRole</span> role</h6>
+        <span class="badge bg-secondary">@sections?.Count sections</span>
+    </div>
+    <div class="card-body p-0">
+        <form asp-action="Save" method="post">
+            <input type="hidden" name="roleName" value="@selectedRole" />
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Section</th>
+                            <th class="text-center" style="width: 120px;">Read</th>
+                            <th class="text-center" style="width: 120px;">Write</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var menuSection in sections ?? Array.Empty<(string Key, string Name, string Icon)>())
+                        {
+                            var rights = access.GetValueOrDefault(menuSection.Key);
+                            <tr>
+                                <td>
+                                    <i class="bi bi-@menuSection.Icon text-primary me-2"></i>
+                                    <span class="fw-medium">@menuSection.Name</span>
+                                    <small class="text-muted d-block ms-4">@menuSection.Key</small>
+                                </td>
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input read-check" name="read_@menuSection.Key" id="read_@menuSection.Key"
+                                           data-section="@menuSection.Key" @(rights.CanRead ? "checked" : "") />
+                                </td>
+                                <td class="text-center">
+                                    <input type="checkbox" class="form-check-input write-check" name="write_@menuSection.Key" id="write_@menuSection.Key"
+                                           data-section="@menuSection.Key" @(rights.CanWrite ? "checked" : "") />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer bg-white border-0 p-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Write access automatically requires Read access.
+                    </small>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-check-lg me-1"></i>Save Access
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.querySelectorAll('.write-check').forEach(writeBox => {
+        writeBox.addEventListener('change', function () {
+            if (this.checked) {
+                const readBox = document.getElementById('read_' + this.dataset.section);
+                if (readBox) readBox.checked = true;
+            }
+        });
+    });
+
+    document.querySelectorAll('.read-check').forEach(readBox => {
+        readBox.addEventListener('change', function () {
+            if (!this.checked) {
+                const writeBox = document.getElementById('write_' + this.dataset.section);
+                if (writeBox) writeBox.checked = false;
+            }
+        });
+    });
+</script>
+}

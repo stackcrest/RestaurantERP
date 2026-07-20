@@ -1,0 +1,139 @@
+@model RestaurantERP.Application.Interfaces.BillPrintDto
+@{
+    Layout = null;
+    var cgstPct = Model.SubTotal > 0 ? Math.Round(Model.CgstAmount / (Model.SubTotal - Model.DiscountAmount) * 100, 1) : 2.5m;
+    var sgstPct = Model.SubTotal > 0 ? Math.Round(Model.SgstAmount / (Model.SubTotal - Model.DiscountAmount) * 100, 1) : 2.5m;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Bill @Model.BillNumber</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', monospace; }
+        body { max-width: 320px; margin: 0 auto; padding: 16px; font-size: 12px; color: #000; }
+        .center { text-align: center; }
+        .bold { font-weight: bold; }
+        .divider { border-top: 1px dashed #000; margin: 8px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 2px 0; vertical-align: top; }
+        .right { text-align: right; }
+        .item-name { max-width: 180px; }
+        @@media print {
+            body { max-width: 80mm; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print center" style="margin-bottom:12px;">
+        <button onclick="window.print()" style="padding:8px 20px;cursor:pointer;">Print Bill</button>
+        <button onclick="window.close()" style="padding:8px 20px;cursor:pointer;margin-left:8px;">Close</button>
+    </div>
+
+    <div class="center">
+        <div class="bold" style="font-size:16px;">@Model.RestaurantName</div>
+        @if (!string.IsNullOrEmpty(Model.RestaurantAddress))
+        {
+            <div style="font-size:10px;">@Model.RestaurantAddress</div>
+        }
+        @if (!string.IsNullOrEmpty(Model.RestaurantPhone))
+        {
+            <div style="font-size:10px;">Tel: @Model.RestaurantPhone</div>
+        }
+        @if (!string.IsNullOrEmpty(Model.Gstin))
+        {
+            <div style="font-size:10px;">GSTIN: @Model.Gstin</div>
+        }
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+        <div><span class="bold">Bill:</span> @Model.BillNumber</div>
+        <div><span class="bold">Order:</span> @Model.OrderNumber</div>
+        <div><span class="bold">Type:</span> @Model.OrderType (@Model.Source)</div>
+        <div><span class="bold">Date:</span> @Model.BillDate.ToLocalTime().ToString("dd/MM/yyyy hh:mm tt")</div>
+        @if (!string.IsNullOrEmpty(Model.CustomerName))
+        {
+            <div><span class="bold">Customer:</span> @Model.CustomerName</div>
+        }
+        @if (!string.IsNullOrEmpty(Model.CustomerPhone))
+        {
+            <div><span class="bold">Phone:</span> @Model.CustomerPhone</div>
+        }
+        @if (!string.IsNullOrEmpty(Model.TableNumber))
+        {
+            <div><span class="bold">Table:</span> @Model.TableNumber</div>
+        }
+        @if (!string.IsNullOrEmpty(Model.CashierName))
+        {
+            <div><span class="bold">Cashier:</span> @Model.CashierName</div>
+        }
+    </div>
+
+    <div class="divider"></div>
+
+    <table>
+        <thead>
+            <tr class="bold">
+                <td class="item-name">Item</td>
+                <td class="right">Qty</td>
+                <td class="right">Amt</td>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td class="item-name">
+                        @item.Name
+                        @if (!string.IsNullOrEmpty(item.VariantName))
+                        {
+                            <br /><small>(@item.VariantName)</small>
+                        }
+                        @if (item.AddOns.Any())
+                        {
+                            <br /><small>+ @string.Join(", ", item.AddOns)</small>
+                        }
+                    </td>
+                    <td class="right">@item.Quantity</td>
+                    <td class="right">@item.TotalPrice.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="divider"></div>
+
+    <table>
+        <tr><td>Subtotal</td><td class="right">₹@Model.SubTotal.ToString("N2")</td></tr>
+        @if (Model.DiscountAmount > 0)
+        {
+            <tr><td>Discount</td><td class="right">-₹@Model.DiscountAmount.ToString("N2")</td></tr>
+        }
+        <tr><td>CGST (@cgstPct%)</td><td class="right">₹@Model.CgstAmount.ToString("N2")</td></tr>
+        <tr><td>SGST (@sgstPct%)</td><td class="right">₹@Model.SgstAmount.ToString("N2")</td></tr>
+        @if (Model.DeliveryFee > 0)
+        {
+            <tr><td>Delivery</td><td class="right">₹@Model.DeliveryFee.ToString("N2")</td></tr>
+        }
+        <tr class="bold" style="font-size:14px;">
+            <td>TOTAL</td>
+            <td class="right">₹@Model.TotalAmount.ToString("N2")</td>
+        </tr>
+        <tr><td>Payment</td><td class="right">@Model.PaymentMethod</td></tr>
+    </table>
+
+    @if (!string.IsNullOrEmpty(Model.Notes))
+    {
+        <div class="divider"></div>
+        <div><span class="bold">Note:</span> @Model.Notes</div>
+    }
+
+    <div class="divider"></div>
+    <div class="center" style="font-size:10px;">
+        @(Model.BillFooterNote ?? "Thank you! Visit again.")
+    </div>
+</body>
+</html>
