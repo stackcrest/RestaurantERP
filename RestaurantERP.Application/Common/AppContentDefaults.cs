@@ -15,10 +15,11 @@ public static class AppContentSections
     public const string Auth = "Auth";
     public const string Social = "Social";
     public const string Integrations = "Integrations";
+    public const string Placeholders = "Placeholders";
 
     public static readonly string[] All =
     [
-        Site, Seo, Home, Footer, About, Contact, Menu, Blog, Auth, Social, Integrations
+        Site, Seo, Home, Footer, About, Contact, Menu, Blog, Auth, Social, Integrations, Placeholders
     ];
 }
 
@@ -159,5 +160,20 @@ public static class AppContentDefaults
         new("integrations.whatsapp.greeting", "Hi! I'm {name}. I need help with my order at {siteName}.", AppContentType.Text, AppContentSections.Integrations, "Support Message Template", "Placeholders: {name}, {email}, {siteName}", 3),
         new("integrations.whatsapp.order_message", "Hi, I'm {name} ({email}). I have a question about my order #{orderNumber}.", AppContentType.Text, AppContentSections.Integrations, "Order Message Template", "Placeholders: {name}, {email}, {orderNumber}, {siteName}", 4),
         new("integrations.whatsapp.button_label", "Chat on WhatsApp", AppContentType.Text, AppContentSections.Integrations, "Button Label", "Floating button tooltip/label", 5),
+
+        // Placeholders — editable form input hints
+        new("placeholder.menu_search", "Search dishes...", AppContentType.Text, AppContentSections.Placeholders, "Menu Search", "Search box on public menu page", 1),
+        new("placeholder.email", "you@example.com", AppContentType.Text, AppContentSections.Placeholders, "Email", "Login / register / contact email fields", 2),
+        new("placeholder.password", "••••••••", AppContentType.Text, AppContentSections.Placeholders, "Password", "Password input hint", 3),
+        new("placeholder.full_name", "John Doe", AppContentType.Text, AppContentSections.Placeholders, "Full Name", null, 4),
+        new("placeholder.phone", "+91 98765 43210", AppContentType.Text, AppContentSections.Placeholders, "Phone", null, 5),
+        new("placeholder.address", "House no., building, street", AppContentType.Text, AppContentSections.Placeholders, "Address", "Checkout address field", 6),
+        new("placeholder.landmark", "Near metro, mall, etc.", AppContentType.Text, AppContentSections.Placeholders, "Landmark", null, 7),
+        new("placeholder.city", "City", AppContentType.Text, AppContentSections.Placeholders, "City", null, 8),
+        new("placeholder.pincode", "110001", AppContentType.Text, AppContentSections.Placeholders, "PIN Code", null, 9),
+        new("placeholder.order_notes", "Any special requests?", AppContentType.Text, AppContentSections.Placeholders, "Order Notes", null, 10),
+        new("placeholder.contact_message", "Tell us how we can help...", AppContentType.Text, AppContentSections.Placeholders, "Contact Message", null, 11),
+        new("placeholder.image_url", "https://...", AppContentType.Text, AppContentSections.Placeholders, "Image URL", "Fallback URL when file upload is not used", 12),
+        new("placeholder.review_comment", "Share your experience...", AppContentType.Text, AppContentSections.Placeholders, "Review Comment", null, 13),
     ];
 }

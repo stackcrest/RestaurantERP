@@ -6,7 +6,12 @@
     <div class="col-lg-6">
         <div class="card">
             <div class="card-body p-4">
-                <form asp-action="Create" method="post">
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger">@TempData["Error"]</div>
+                }
+                <form asp-action="Create" method="post" enctype="multipart/form-data" novalidate>
+                    @Html.AntiForgeryToken()
                     <div asp-validation-summary="All" class="text-danger small mb-3"></div>
 
                     <div class="mb-3">
@@ -19,16 +24,20 @@
                         <textarea name="description" class="form-control" rows="2" placeholder="Optional short description"></textarea>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Display Order</label>
-                            <input type="number" name="displayOrder" class="form-control" value="1" min="0" />
-                            <small class="text-muted">Lower numbers appear first</small>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Image URL</label>
-                            <input type="url" name="imageUrl" class="form-control" placeholder="https://..." />
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label">Category Photo</label>
+                        <input type="file" name="imageFile" class="form-control" accept="image/jpeg,image/png,image/webp,image/gif" />
+                        <div class="form-text">JPG, PNG, WEBP or GIF — shown on homepage Explore Categories</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Or Image URL / path</label>
+                        <input type="text" name="imageUrl" class="form-control" placeholder="@AppContent.Get("placeholder.image_url", "https://... or /images/...")" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Display Order</label>
+                        <input type="number" name="displayOrder" class="form-control" value="1" min="0" />
+                        <small class="text-muted">Lower numbers appear first</small>
                     </div>
 
                     <div class="mb-4">

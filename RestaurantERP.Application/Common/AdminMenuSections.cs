@@ -11,6 +11,7 @@ public static class AdminMenuSections
     public const string Reports = "reports";
     public const string Pos = "pos";
     public const string Contact = "contact";
+    public const string Offers = "offers";
 
     public static readonly IReadOnlyList<(string Key, string Name, string Icon)> All =
     [
@@ -19,6 +20,7 @@ public static class AdminMenuSections
         (Pos, "POS / Billing", "cash-stack"),
         (Categories, "Categories", "folder"),
         (MenuItems, "Menu Items", "grid"),
+        (Offers, "Offers", "percent"),
         (Tables, "Tables", "columns-gap"),
         (Inventory, "Inventory", "box-seam"),
         (Reports, "Reports", "bar-chart"),
@@ -33,6 +35,7 @@ public static class AdminMenuSections
         "Orders" => Orders,
         "Categories" => Categories,
         "Menu" => MenuItems,
+        "Offers" => Offers,
         "Tables" => Tables,
         "Inventory" => Inventory,
         "Reports" => Reports,

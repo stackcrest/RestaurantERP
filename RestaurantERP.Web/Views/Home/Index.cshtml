@@ -59,9 +59,18 @@
                 <div class="col-6 col-md-4 col-lg-2">
                     <a href="/Menu?category=@cat.Id" class="text-decoration-none">
                         <div class="card text-center p-4 h-100">
-                            <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 60px; height: 60px;">
-                                <i class="bi bi-egg-fried text-primary fs-4"></i>
-                            </div>
+                            @if (!string.IsNullOrEmpty(cat.ImageUrl))
+                            {
+                                <img src="@cat.ImageUrl" alt="@cat.Name"
+                                     class="rounded-circle mx-auto mb-3"
+                                     style="width: 72px; height: 72px; object-fit: cover;" />
+                            }
+                            else
+                            {
+                                <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 72px; height: 72px;">
+                                    <i class="bi bi-egg-fried text-primary fs-4"></i>
+                                </div>
+                            }
                             <h6 class="fw-bold text-dark mb-0">@cat.Name</h6>
                         </div>
                     </a>
@@ -94,21 +103,39 @@
 </section>
 
 <!-- CTA Section -->
+@{
+    var homeOffer = ViewBag.ActiveOffer as RestaurantERP.Application.DTOs.Orders.CouponDto;
+    var ctaTitle = homeOffer?.Title ?? AppContent.Get("home.cta.title");
+    var ctaSubtitle = homeOffer?.Subtitle ?? AppContent.Get("home.cta.subtitle");
+    var ctaButton = homeOffer?.CtaText ?? "Create Account";
+}
 <section class="py-5 bg-primary text-white">
     <div class="container text-center">
-        <h2 class="fw-bold mb-3">@AppContent.Get("home.cta.title")</h2>
-        <p class="lead mb-4 opacity-75">@AppContent.Get("home.cta.subtitle")</p>
+        @if (!string.IsNullOrEmpty(homeOffer?.BadgeText))
+        {
+            <span class="badge bg-light text-primary mb-3 px-3 py-2">@homeOffer.BadgeText</span>
+        }
+        <h2 class="fw-bold mb-3">@ctaTitle</h2>
+        <p class="lead mb-4 opacity-75">@ctaSubtitle</p>
         @if (!User.Identity?.IsAuthenticated ?? true)
         {
             <a href="/Account/Register" class="btn btn-light btn-lg px-5">
-                <i class="bi bi-person-plus me-2"></i>Create Account
+                <i class="bi bi-person-plus me-2"></i>@ctaButton
             </a>
+            @if (homeOffer != null)
+            {
+                <p class="small mt-3 mb-0 opacity-75">Use code <strong>@homeOffer.Code</strong> at checkout</p>
+            }
         }
         else
         {
             <a href="/Menu" class="btn btn-light btn-lg px-5">
                 <i class="bi bi-cart-plus me-2"></i>Order Now
             </a>
+            @if (homeOffer != null)
+            {
+                <p class="small mt-3 mb-0 opacity-75">Apply code <strong>@homeOffer.Code</strong> at checkout</p>
+            }
         }
     </div>
 </section>

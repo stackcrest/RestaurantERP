@@ -90,6 +90,14 @@
                     </a>
                 </li>
             }
+            @if (CanRead(AdminMenuSections.Offers))
+            {
+                <li class="nav-item">
+                    <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Offers" ? "active" : "")" href="/Admin/Offers">
+                        <i class="bi bi-percent me-2"></i> Offers
+                    </a>
+                </li>
+            }
             @if (CanRead(AdminMenuSections.Tables))
             {
                 <li class="nav-item">
@@ -178,6 +186,10 @@
             @if (CanRead(AdminMenuSections.MenuItems))
             {
                 <li><a class="nav-link text-white" href="/Admin/Menu"><i class="bi bi-grid me-2"></i> Menu Items</a></li>
+            }
+            @if (CanRead(AdminMenuSections.Offers))
+            {
+                <li><a class="nav-link text-white" href="/Admin/Offers"><i class="bi bi-percent me-2"></i> Offers</a></li>
             }
             @if (CanRead(AdminMenuSections.Tables))
             {

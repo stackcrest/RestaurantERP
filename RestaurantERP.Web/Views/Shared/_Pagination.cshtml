@@ -1,0 +1,35 @@
+@*
+  Shared pager. Expects ViewBag.CurrentPage, ViewBag.TotalPages, ViewBag.PaginationBaseUrl (path + existing query without page).
+  Optional: ViewBag.PageQueryName (default "page")
+*@
+@{
+    var currentPage = (int)(ViewBag.CurrentPage ?? 1);
+    var totalPages = (int)(ViewBag.TotalPages ?? 1);
+    var pageQuery = (string?)ViewBag.PageQueryName ?? "page";
+    var baseUrl = (string?)ViewBag.PaginationBaseUrl ?? Context.Request.Path.Value ?? "/";
+    var join = baseUrl.Contains('?') ? "&" : "?";
+}
+@if (totalPages > 1)
+{
+    <nav class="mt-4" aria-label="Pagination">
+        <ul class="pagination justify-content-center flex-wrap mb-0">
+            <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                <a class="page-link" href="@(currentPage <= 1 ? "#" : $"{baseUrl}{join}{pageQuery}={currentPage - 1}")">Previous</a>
+            </li>
+            @{
+                var start = Math.Max(1, currentPage - 2);
+                var end = Math.Min(totalPages, start + 4);
+                start = Math.Max(1, end - 4);
+            }
+            @for (var i = start; i <= end; i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")">
+                    <a class="page-link" href="@($"{baseUrl}{join}{pageQuery}={i}")">@i</a>
+                </li>
+            }
+            <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                <a class="page-link" href="@(currentPage >= totalPages ? "#" : $"{baseUrl}{join}{pageQuery}={currentPage + 1}")">Next</a>
+            </li>
+        </ul>
+    </nav>
+}

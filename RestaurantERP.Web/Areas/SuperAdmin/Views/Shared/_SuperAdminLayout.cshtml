@@ -101,6 +101,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Offers" ? "active" : "")" href="/Admin/Offers">
+                    <i class="bi bi-tag me-2"></i> Offers
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Contact" ? "active" : "")" href="/Admin/Contact">
                     <i class="bi bi-envelope me-2"></i> Contact Inquiries
                 </a>

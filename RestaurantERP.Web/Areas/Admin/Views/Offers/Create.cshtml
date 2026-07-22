@@ -1,0 +1,100 @@
+@{
+    ViewData["Title"] = "Create Offer";
+    var validFrom = (DateTime)(ViewBag.ValidFrom ?? DateTime.Today);
+    var validTo = (DateTime)(ViewBag.ValidTo ?? DateTime.Today.AddMonths(3));
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-4">Create Offer</h5>
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger">@TempData["Error"]</div>
+                }
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Code *</label>
+                            <input type="text" name="code" class="form-control text-uppercase" required placeholder="WELCOME10" />
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Title *</label>
+                            <input type="text" name="title" class="form-control" required placeholder="Welcome Offer" value="Welcome Offer" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Homepage subtitle / CTA line</label>
+                        <input type="text" name="subtitle" class="form-control" placeholder="Sign up now and get 10% off on your first order!" value="Sign up now and get 10% off on your first order!" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Internal description</label>
+                        <textarea name="description" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Badge text</label>
+                            <input type="text" name="badgeText" class="form-control" value="10% OFF" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">CTA button text</label>
+                            <input type="text" name="ctaText" class="form-control" value="Create Account" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Discount % *</label>
+                            <input type="number" name="discountPercentage" class="form-control" step="0.01" min="0" max="100" value="10" required />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Max discount (₹)</label>
+                            <input type="number" name="maxDiscountAmount" class="form-control" step="0.01" min="0" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Min order (₹)</label>
+                            <input type="number" name="minimumOrderAmount" class="form-control" step="0.01" min="0" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Usage limit</label>
+                            <input type="number" name="usageLimit" class="form-control" min="1" placeholder="Unlimited" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Valid from *</label>
+                            <input type="date" name="validFrom" class="form-control" value="@validFrom.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Valid to *</label>
+                            <input type="date" name="validTo" class="form-control" value="@validTo.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Priority</label>
+                            <input type="number" name="priority" class="form-control" value="10" />
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="showOnHomepage" value="true" class="form-check-input" id="showHome" checked />
+                            <label class="form-check-label" for="showHome">Show on homepage</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="firstOrderOnly" value="true" class="form-check-input" id="firstOrder" checked />
+                            <label class="form-check-label" for="firstOrder">First order only</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" name="isActive" value="true" class="form-check-input" id="isActive" checked />
+                            <label class="form-check-label" for="isActive">Active / running</label>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">Create &amp; Run Offer</button>
+                        <a href="/Admin/Offers" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
