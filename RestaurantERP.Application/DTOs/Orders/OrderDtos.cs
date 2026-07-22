@@ -91,23 +91,45 @@ public class TableDto
 public class CreateCouponDto
 {
     public string Code { get; set; } = string.Empty;
+    public string? Title { get; set; }
     public string? Description { get; set; }
+    public string? Subtitle { get; set; }
+    public string? BadgeText { get; set; }
+    public string? CtaText { get; set; }
     public decimal DiscountPercentage { get; set; }
+    public decimal? MaxDiscountAmount { get; set; }
     public decimal? MinimumOrderAmount { get; set; }
     public DateTime ValidFrom { get; set; }
     public DateTime ValidTo { get; set; }
     public int? UsageLimit { get; set; }
+    public bool ShowOnHomepage { get; set; }
+    public bool FirstOrderOnly { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int Priority { get; set; }
 }
 
 public class CouponDto
 {
     public Guid Id { get; set; }
     public string Code { get; set; } = string.Empty;
+    public string? Title { get; set; }
     public string? Description { get; set; }
+    public string? Subtitle { get; set; }
+    public string? BadgeText { get; set; }
+    public string? CtaText { get; set; }
     public decimal DiscountPercentage { get; set; }
+    public decimal? MaxDiscountAmount { get; set; }
     public decimal? MinimumOrderAmount { get; set; }
+    public DateTime ValidFrom { get; set; }
+    public DateTime ValidTo { get; set; }
+    public int? UsageLimit { get; set; }
+    public int UsedCount { get; set; }
     public bool IsActive { get; set; }
+    public bool ShowOnHomepage { get; set; }
+    public bool FirstOrderOnly { get; set; }
+    public int Priority { get; set; }
     public decimal? CalculatedDiscount { get; set; }
+    public bool IsCurrentlyValid { get; set; }
 }
 
 public class CreateReviewDto

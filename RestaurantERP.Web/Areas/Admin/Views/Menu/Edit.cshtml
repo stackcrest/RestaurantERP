@@ -2,15 +2,36 @@
 @{
     ViewData["Title"] = "Edit Menu Item";
     var categories = ViewBag.Categories as List<RestaurantERP.Domain.Entities.Category>;
+    var returnPage = (int)(ViewBag.ReturnPage ?? 1);
+    var returnCategoryId = ViewBag.ReturnCategoryId as Guid?;
+    var returnSearch = ViewBag.ReturnSearch as string;
+
+    string IndexUrl()
+    {
+        var parts = new List<string>();
+        if (returnPage > 1) parts.Add($"page={returnPage}");
+        if (returnCategoryId.HasValue) parts.Add($"categoryId={returnCategoryId}");
+        if (!string.IsNullOrWhiteSpace(returnSearch)) parts.Add($"search={Uri.EscapeDataString(returnSearch)}");
+        return parts.Count == 0 ? "/Admin/Menu" : $"/Admin/Menu?{string.Join("&", parts)}";
+    }
 }
 
 <div class="row justify-content-center">
     <div class="col-lg-8">
         <div class="card">
             <div class="card-body p-4">
-                <form asp-action="Edit" method="post">
+                <form asp-action="Edit" method="post" enctype="multipart/form-data" novalidate>
+                    @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@Model.Id" />
-                    
+                    <input type="hidden" name="returnPage" value="@returnPage" />
+                    @if (returnCategoryId.HasValue)
+                    {
+                        <input type="hidden" name="returnCategoryId" value="@returnCategoryId" />
+                    }
+                    @if (!string.IsNullOrWhiteSpace(returnSearch))
+                    {
+                        <input type="hidden" name="returnSearch" value="@returnSearch" />
+                    }
                     <div class="row">
                         <div class="col-md-8 mb-3">
                             <label class="form-label">Name *</label>
@@ -67,10 +88,27 @@
                             <label class="form-label">Preparation Time (minutes)</label>
                             <input type="number" name="preparationTime" class="form-control" value="@Model.PreparationTimeMinutes" />
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Image URL</label>
-                            <input type="url" name="imageUrl" class="form-control" value="@Model.ImageUrl" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Current Image</label>
+                            <div>
+                                <img src="@Model.ImageUrl" alt="@Model.Name" class="rounded border" style="max-height: 120px; object-fit: cover;" />
+                            </div>
                         </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label">Upload New Image</label>
+                        <input type="file" name="imageFile" class="form-control" accept="image/jpeg,image/png,image/webp,image/gif" />
+                        <div class="form-text">JPG, PNG, WEBP or GIF up to 5 MB</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Or Image URL</label>
+                        <input type="text" name="imageUrl" class="form-control" value="@Model.ImageUrl" placeholder="@AppContent.Get("placeholder.image_url", "https://... or /images/...")" />
+                        <div class="form-text">Used when no new file is uploaded</div>
                     </div>
 
                     <div class="mb-4">
@@ -90,7 +128,7 @@
 
                     <div class="d-flex gap-2">
                         <button type="submit" class="btn btn-primary">Save Changes</button>
-                        <a href="/Admin/Menu" class="btn btn-outline-secondary">Cancel</a>
+                        <a href="@IndexUrl()" class="btn btn-outline-secondary">Cancel</a>
                     </div>
                 </form>
             </div>

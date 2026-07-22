@@ -21,7 +21,10 @@ public class CommissionController : Controller
 
     public async Task<IActionResult> Index()
     {
-        var rules = await _context.CommissionRules.Where(r => r.IsActive).OrderBy(r => r.Name).ToListAsync();
+        var rules = await _context.CommissionRules
+            .Where(r => !r.IsDeleted)
+            .OrderBy(r => r.Name)
+            .ToListAsync();
         var thisMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
 
         ViewBag.TotalEarned = await _commissionService.GetTotalCommissionAsync();
@@ -70,9 +73,11 @@ public class CommissionController : Controller
     public async Task<IActionResult> Delete(Guid id)
     {
         var rule = await _context.CommissionRules.FindAsync(id);
-        if (rule != null)
+        if (rule != null && !rule.IsDeleted)
         {
             rule.IsDeleted = true;
+            rule.IsActive = false;
+            rule.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             TempData["Success"] = "Rule deleted.";
         }

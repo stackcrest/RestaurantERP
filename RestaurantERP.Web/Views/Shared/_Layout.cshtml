@@ -1,11 +1,14 @@
 ﻿@using Microsoft.AspNetCore.Identity
+@using RestaurantERP.Application.DTOs.Orders
 @inject IWhatsAppIntegrationService WhatsApp
 @inject SignInManager<RestaurantERP.Domain.Entities.ApplicationUser> SignInManager
 @inject UserManager<RestaurantERP.Domain.Entities.ApplicationUser> UserManager
 @{
     var theme = ViewBag.SiteTheme as ThemeSetting;
     var mainNav = ViewBag.MainNav as List<NavigationMenuItem> ?? new();
+    var mainNavChildren = ViewBag.MainNavChildren as Dictionary<Guid, List<NavigationMenuItem>> ?? new();
     var footerNav = ViewBag.FooterNav as List<NavigationMenuItem> ?? new();
+    var activeOffer = ViewBag.ActiveOffer as CouponDto;
     var siteName = AppContent.Get("site.name", "Restaurant ERP");
     var logoIcon = AppContent.Get("site.logo_icon", "bi-fire");
     var primary = theme?.PrimaryColor ?? "#E63946";
@@ -21,12 +24,13 @@
     <title>@ViewData["Title"] - @AppContent.Get("seo.title_suffix", siteName)</title>
     @if (!string.IsNullOrEmpty(theme?.FaviconUrl))
     {
-        <link rel="icon" href="@theme.FaviconUrl" />
+        <link rel="icon" href="@(theme.FaviconUrl)?v=@(theme.Version)" />
     }
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link href="~/css/whatsapp-widget.css" asp-append-version="true" rel="stylesheet" />
+    <link href="~/css/site-nav.css" asp-append-version="true" rel="stylesheet" />
     <style>
         :root {
             --primary: @primary;
@@ -35,15 +39,7 @@
             --accent: @accent;
             --light: #F8F9FA;
             --dark: #212529;
-        }        * { font-family: 'Poppins', sans-serif; }
-        
-        /* Navbar */
-        .navbar { background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-        .navbar-brand { font-weight: 700; color: var(--primary) !important; font-size: 1.5rem; }
-        .nav-link { font-weight: 500; color: var(--dark) !important; margin: 0 0.5rem; }
-        .nav-link:hover { color: var(--primary) !important; }
-        .navbar .btn-primary { background: var(--primary); border: none; padding: 0.5rem 1.5rem; }
-        .navbar .btn-primary:hover { background: var(--primary-dark); }
+        }
         
         /* Buttons */
         .btn-primary { background: var(--primary); border-color: var(--primary); }
@@ -87,13 +83,15 @@
         /* Blinkit-style cart controls */
         .blinkit-add-btn {
             background: #fff;
-            border: 1px solid var(--primary);
+            border: 1.5px solid var(--primary);
             color: var(--primary);
             font-weight: 700;
             font-size: 0.8rem;
             padding: 0.35rem 1.25rem;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            min-height: 36px;
+            min-width: 72px;
         }
         .blinkit-add-btn:hover { background: #fff5f5; color: var(--primary-dark); border-color: var(--primary-dark); }
         .blinkit-qty-stepper {
@@ -103,6 +101,7 @@
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(230,57,70,0.35);
+            min-height: 36px;
         }
         .blinkit-qty-stepper .btn {
             background: transparent;
@@ -112,6 +111,8 @@
             font-size: 1.1rem;
             padding: 0.25rem 0.65rem;
             line-height: 1;
+            min-width: 40px;
+            min-height: 36px;
         }
         .blinkit-qty-stepper .btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
         .blinkit-qty-stepper .qty-value {
@@ -132,52 +133,145 @@
             z-index: 1050;
             background: var(--primary);
             color: #fff;
-            padding: 0.85rem 1.25rem;
+            padding: 0.9rem 1.25rem;
+            padding-bottom: calc(0.9rem + env(safe-area-inset-bottom, 0px));
             box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
         }
         #floatingCartBar a { color: #fff; text-decoration: none; }
-        
+        body.has-sticky-cart { padding-bottom: 4.5rem; }
+        body.hide-sticky-cart #floatingCartBar,
+        body.hide-sticky-cart #desktopCartWrapper { display: none !important; }
+
+        .option-chip {
+            border: 1.5px solid #dee2e6;
+            border-radius: 12px;
+            padding: 0.85rem 1rem;
+            cursor: pointer;
+            transition: border-color .15s, background .15s;
+            user-select: none;
+        }
+        .option-chip.active, .option-chip:has(input:checked) {
+            border-color: var(--primary);
+            background: rgba(230, 57, 70, 0.06);
+        }
+        .option-chip input { display: none; }
+
         /* Responsive */
         @@media (max-width: 768px) {
             .hero h1 { font-size: 2rem; }
             .hero { min-height: 400px; }
+            .blinkit-add-btn {
+                font-size: 0.95rem;
+                padding: 0.55rem 1.35rem;
+                min-height: 44px;
+                min-width: 88px;
+            }
+            .blinkit-qty-stepper { min-height: 44px; }
+            .blinkit-qty-stepper .btn {
+                min-width: 44px;
+                min-height: 44px;
+                font-size: 1.35rem;
+                padding: 0.35rem 0.75rem;
+            }
+            .blinkit-qty-stepper .qty-value { font-size: 1rem; min-width: 1.75rem; }
+            .menu-card .card-img-top { height: 160px !important; }
         }
     </style>
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
 @await Html.PartialAsync("_NotificationBar")
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg sticky-top">
+
+    <div class="site-topbar py-2 d-none d-md-block">
+        <div class="container d-flex justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <a href="tel:@AppContent.Get("footer.phone")"><i class="bi bi-telephone me-1"></i>@AppContent.Get("footer.phone")</a>
+                <span class="opacity-50">|</span>
+                <a href="mailto:@AppContent.Get("footer.email")"><i class="bi bi-envelope me-1"></i>@AppContent.Get("footer.email")</a>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                @if (activeOffer != null)
+                {
+                    <span class="offer-chip">@(activeOffer.BadgeText ?? $"{activeOffer.DiscountPercentage:0}% OFF")</span>
+                    <span>@activeOffer.Subtitle · Code <strong>@activeOffer.Code</strong></span>
+                }
+                else
+                {
+                    <span>@AppContent.Get("site.tagline", "Delicious food, delivered fast")</span>
+                }
+            </div>
+        </div>
+    </div>
+
+    <nav class="navbar navbar-expand-lg sticky-top site-navbar">
         <div class="container">
             <a class="navbar-brand" href="/">
                 @if (!string.IsNullOrEmpty(theme?.LogoUrl))
                 {
-                    <img src="@theme.LogoUrl" alt="@siteName" height="32" class="me-2" />
+                    <img src="@(theme.LogoUrl)?v=@(theme.Version)" alt="@siteName" />
                 }
                 else
                 {
-                    <i class="bi @logoIcon me-2"></i>
+                    <i class="bi @logoIcon" style="color: var(--primary);"></i>
                 }
                 @siteName
-            </a>            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            </a>
+            <button class="navbar-toggler border-0" type="button"
+                    data-bs-toggle="offcanvas" data-bs-target="#siteNavOffcanvas"
+                    aria-controls="siteNavOffcanvas" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
+            <div class="offcanvas-lg offcanvas-end site-nav-offcanvas" tabindex="-1" id="siteNavOffcanvas" aria-labelledby="siteNavOffcanvasLabel">
+                <div class="offcanvas-header border-bottom">
+                    <h5 class="offcanvas-title fw-bold mb-0" id="siteNavOffcanvasLabel">Menu</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#siteNavOffcanvas" aria-label="Close"></button>
+                </div>
+                <div class="offcanvas-body">
+                <ul class="navbar-nav mx-lg-auto align-items-lg-center">
                     @foreach (var navItem in mainNav)
                     {
-                        var isActive = navItem.Url == "/" 
+                        var isActive = navItem.Url == "/"
                             ? ViewContext.RouteData.Values["controller"]?.ToString() == "Home" && ViewContext.RouteData.Values["action"]?.ToString() == "Index"
                             : Context.Request.Path.Value?.StartsWith(navItem.Url ?? "", StringComparison.OrdinalIgnoreCase) == true;
-                        <li class="nav-item">
-                            <a class="nav-link @(isActive ? "active text-primary" : "")" href="@navItem.Url" @(navItem.OpenInNewTab ? "target=\"_blank\" rel=\"noopener\"" : "")>
-                                @if (!string.IsNullOrEmpty(navItem.Icon)) { <i class="bi @navItem.Icon me-1"></i> }
-                                @navItem.Label
-                            </a>
-                        </li>
+                        var children = mainNavChildren.GetValueOrDefault(navItem.Id);
+
+                        if (children != null && children.Count > 0)
+                        {
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle @(isActive ? "active" : "")" href="@(string.IsNullOrEmpty(navItem.Url) ? "#" : navItem.Url)" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+                                    @if (!string.IsNullOrEmpty(navItem.Icon)) { <i class="bi @navItem.Icon me-1"></i> }
+                                    @navItem.Label
+                                </a>
+                                <ul class="dropdown-menu">
+                                    @if (!string.IsNullOrEmpty(navItem.Url))
+                                    {
+                                        <li><a class="dropdown-item" href="@navItem.Url">@navItem.Label</a></li>
+                                        <li><hr class="dropdown-divider" /></li>
+                                    }
+                                    @foreach (var child in children)
+                                    {
+                                        <li>
+                                            <a class="dropdown-item" href="@child.Url" @(child.OpenInNewTab ? "target=\"_blank\" rel=\"noopener\"" : "")>
+                                                @if (!string.IsNullOrEmpty(child.Icon)) { <i class="bi @child.Icon me-2"></i> }
+                                                @child.Label
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @(isActive ? "active" : "")" href="@(navItem.Url ?? "#")" @(navItem.OpenInNewTab ? "target=\"_blank\" rel=\"noopener\"" : "")>
+                                    @if (!string.IsNullOrEmpty(navItem.Icon)) { <i class="bi @navItem.Icon me-1"></i> }
+                                    @navItem.Label
+                                </a>
+                            </li>
+                        }
                     }
-                </ul>                <ul class="navbar-nav">
+                </ul>
+                <ul class="navbar-nav align-items-lg-center site-nav-actions">
                     @if (SignInManager.IsSignedIn(User))
                     {
                         var user = await UserManager.GetUserAsync(User);
@@ -192,22 +286,22 @@
                         {
                         <li class="nav-item">
                             <a class="nav-link text-success" href="@waSupportUrl" target="_blank" rel="noopener noreferrer" title="WhatsApp Support">
-                                <i class="bi bi-whatsapp"></i> Support
+                                <i class="bi bi-whatsapp me-1"></i><span class="d-lg-none">WhatsApp</span>
                             </a>
                         </li>
                         }
                         <li class="nav-item">
                             <a class="nav-link" href="/Cart">
-                                <i class="bi bi-cart3"></i> Cart
+                                <i class="bi bi-bag me-1"></i><span class="d-lg-none">Cart</span>
                                 <span class="badge bg-primary rounded-pill @(ViewBag.CartCount != null && (int)ViewBag.CartCount > 0 ? "" : "d-none")" id="navCartBadge">@(ViewBag.CartCount ?? 0)</span>
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="/Orders">My Orders</a>
+                        <li class="nav-item d-none d-lg-block">
+                            <a class="nav-link" href="/Orders">Orders</a>
                         </li>
                         }
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown" data-bs-auto-close="outside">
                                 @if (!string.IsNullOrEmpty(user?.AvatarUrl))
                                 {
                                     <img src="@user.AvatarUrl" alt="@user.FullName" class="rounded-circle nav-avatar" />
@@ -216,10 +310,14 @@
                                 {
                                     <i class="bi bi-person-circle"></i>
                                 }
-                                <span>@user?.FullName</span>
+                                <span class="d-lg-inline text-uppercase site-nav-user-label" style="font-size:0.8rem;">@(user?.FullName ?? "Account")</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item" href="/Profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+                                @if (!isStaff)
+                                {
+                                    <li><a class="dropdown-item d-lg-none" href="/Orders"><i class="bi bi-receipt me-2"></i>My Orders</a></li>
+                                }
                                 @if (roles.Contains("Admin") || roles.Contains("SuperAdmin"))
                                 {
                                     <li><hr class="dropdown-divider"></li>
@@ -244,10 +342,11 @@
                             <a class="nav-link" href="/Account/Login">Login</a>
                         </li>
                         <li class="nav-item">
-                            <a class="btn btn-primary ms-2" href="/Account/Register">Sign Up</a>
+                            <a class="btn btn-primary ms-lg-2" href="/Account/QuickJoin">Order now</a>
                         </li>
                     }
                 </ul>
+                </div>
             </div>
         </div>
     </nav>
@@ -257,7 +356,14 @@
         @RenderBody()
     </main>
 
-    <!-- Floating Cart Bar (mobile, Blinkit style) -->
+    <!-- Floating Cart Bar (sticky everywhere except cart/checkout) -->
+    @{
+        var ctrl = ViewContext.RouteData.Values["controller"]?.ToString();
+        var act = ViewContext.RouteData.Values["action"]?.ToString();
+        var hideStickyCart = string.Equals(ctrl, "Cart", StringComparison.OrdinalIgnoreCase)
+            || (string.Equals(ctrl, "Orders", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(act, "Checkout", StringComparison.OrdinalIgnoreCase));
+    }
     @if (SignInManager.IsSignedIn(User))
     {
         var layoutUser = await UserManager.GetUserAsync(User);
@@ -266,19 +372,46 @@
         if (!layoutIsStaff)
         {
         var showCart = ViewBag.CartCount != null && ViewBag.CartCount > 0;
-        <div id="floatingCartBar" class="d-md-none @(showCart ? "" : "d-none")">
+        if (hideStickyCart)
+        {
+            <script>document.body.classList.add('hide-sticky-cart');</script>
+        }
+        else if (showCart)
+        {
+            <script>document.body.classList.add('has-sticky-cart');</script>
+        }
+        <div id="floatingCartBar" class="d-md-none @(showCart && !hideStickyCart ? "" : "d-none")" data-hide-on-cart="@(hideStickyCart ? "1" : "0")">
             <a href="/Cart" class="d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-cart3 me-2"></i><span id="floatingCartCount">@(ViewBag.CartCount ?? 0)</span> items</span>
-                <span class="fw-bold">View Cart <span id="floatingCartTotal">₹@(ViewBag.CartTotal?.ToString("N0") ?? "0")</span> <i class="bi bi-chevron-right"></i></span>
+                <span><i class="bi bi-bag-check me-2"></i><span id="floatingCartCount">@(ViewBag.CartCount ?? 0)</span> items</span>
+                <span class="fw-bold">View cart · <span id="floatingCartTotal">₹@(ViewBag.CartTotal?.ToString("N0") ?? "0")</span> <i class="bi bi-chevron-right"></i></span>
             </a>
         </div>
-        <div id="desktopCartWrapper" class="cart-floating @(showCart ? "d-none d-md-block" : "d-none")">
+        <div id="desktopCartWrapper" class="cart-floating @(showCart && !hideStickyCart ? "d-none d-md-block" : "d-none")">
             <a href="/Cart" class="btn btn-primary" id="desktopCartBtn">
-                <i class="bi bi-cart3 me-2"></i><span id="desktopCartCount">@(ViewBag.CartCount ?? 0)</span> items - <span id="desktopCartTotal">₹@(ViewBag.CartTotal?.ToString("N0") ?? "0")</span>
+                <i class="bi bi-bag-check me-2"></i>View cart · <span id="desktopCartCount">@(ViewBag.CartCount ?? 0)</span> · <span id="desktopCartTotal">₹@(ViewBag.CartTotal?.ToString("N0") ?? "0")</span>
             </a>
         </div>
         }
     }
+
+    <!-- Mobile add-ons / variants bottom sheet -->
+    <div class="offcanvas offcanvas-bottom rounded-top-4" tabindex="-1" id="menuOptionsSheet" style="height: auto; max-height: 85vh;">
+        <div class="offcanvas-header border-bottom">
+            <div>
+                <h5 class="offcanvas-title fw-bold mb-0" id="menuOptionsTitle">Customize</h5>
+                <small class="text-muted" id="menuOptionsPrice"></small>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body" id="menuOptionsBody">
+            <div class="text-center py-4 text-muted">Loading…</div>
+        </div>
+        <div class="p-3 border-top">
+            <button type="button" class="btn btn-primary w-100 py-3 fw-semibold" id="menuOptionsAddBtn" disabled>
+                Add to cart
+            </button>
+        </div>
+    </div>
 
     @await Html.PartialAsync("_WhatsAppWidget")
 
@@ -290,7 +423,7 @@
                     <h5 class="fw-bold mb-3">
                         @if (!string.IsNullOrEmpty(theme?.LogoUrl))
                         {
-                            <img src="@theme.LogoUrl" alt="@siteName" height="28" class="me-2" />
+                            <img src="@(theme.LogoUrl)?v=@(theme.Version)" alt="@siteName" height="28" class="me-2" />
                         }
                         else
                         {
@@ -344,6 +477,25 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/notification-bar.js" asp-append-version="true"></script>
+    <script>
+        // Close mobile nav after clicking a real link (Menu, Blog, Contact, etc.)
+        document.getElementById('siteNavOffcanvas')?.addEventListener('click', (e) => {
+            const link = e.target.closest('a[href]');
+            if (!link) return;
+            const href = link.getAttribute('href') || '';
+            if (!href || href === '#' || href.startsWith('javascript:')) return;
+            if (window.matchMedia('(min-width: 992px)').matches) return;
+            const panel = document.getElementById('siteNavOffcanvas');
+            const instance = bootstrap.Offcanvas.getInstance(panel);
+            instance?.hide();
+        });
+        // Safety: remove leftover backdrops that block page clicks
+        document.getElementById('siteNavOffcanvas')?.addEventListener('hidden.bs.offcanvas', () => {
+            document.querySelectorAll('.offcanvas-backdrop').forEach((el) => el.remove());
+            document.body.classList.remove('overflow-hidden');
+            document.body.style.removeProperty('padding-right');
+        });
+    </script>
     @if (SignInManager.IsSignedIn(User))
     {
         var scriptUser = await UserManager.GetUserAsync(User);
@@ -351,7 +503,7 @@
         var scriptIsStaff = scriptRoles.Contains("Admin") || scriptRoles.Contains("SuperAdmin");
         if (!scriptIsStaff)
         {
-            <script src="~/js/blinkit-cart.js"></script>
+            <script src="~/js/blinkit-cart.js" asp-append-version="true"></script>
         }
     }
     @await RenderSectionAsync("Scripts", required: false)

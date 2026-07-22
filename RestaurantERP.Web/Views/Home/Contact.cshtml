@@ -32,12 +32,12 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label asp-for="Name" class="form-label"></label>
-                            <input asp-for="Name" class="form-control form-control-lg" placeholder="John Doe" />
+                            <input asp-for="Name" class="form-control form-control-lg" placeholder="@AppContent.Get("placeholder.full_name", "John Doe")" />
                             <span asp-validation-for="Name" class="text-danger small"></span>
                         </div>
                         <div class="col-md-6">
                             <label asp-for="Email" class="form-label"></label>
-                            <input asp-for="Email" class="form-control form-control-lg" placeholder="john@example.com" />
+                            <input asp-for="Email" class="form-control form-control-lg" placeholder="@AppContent.Get("placeholder.email", "john@example.com")" />
                             <span asp-validation-for="Email" class="text-danger small"></span>
                         </div>
                         <div class="col-12">
@@ -59,7 +59,7 @@
                         </div>
                         <div class="col-12">
                             <label asp-for="Message" class="form-label"></label>
-                            <textarea asp-for="Message" class="form-control" rows="5" placeholder="Tell us how we can help..."></textarea>
+                            <textarea asp-for="Message" class="form-control" rows="5" placeholder="@AppContent.Get("placeholder.contact_message", "Tell us how we can help...")"></textarea>
                             <span asp-validation-for="Message" class="text-danger small"></span>
                         </div>
                         <div class="col-12">

@@ -7,6 +7,10 @@ public interface IUploadStorageService
     Task DeleteIfExistsAsync(string? publicUrl);
 }
 
+/// <summary>
+/// Stores uploads under App_Data/images (NOT wwwroot) so file writes do not restart the app under dotnet watch / VS Hot Reload.
+/// Public URLs remain /images/{subfolder}/{file}.
+/// </summary>
 public class UploadStorageService : IUploadStorageService
 {
     private readonly IWebHostEnvironment _env;
@@ -16,7 +20,8 @@ public class UploadStorageService : IUploadStorageService
     {
         _env = env;
         _logger = logger;
-        UploadsRoot = Path.Combine(_env.ContentRootPath, "App_Data", "uploads");
+
+        UploadsRoot = Path.Combine(_env.ContentRootPath, "App_Data", "images");
         Directory.CreateDirectory(UploadsRoot);
     }
 
@@ -24,7 +29,7 @@ public class UploadStorageService : IUploadStorageService
 
     public async Task<(string? Url, string? Error)> SaveImageAsync(IFormFile file, string subfolder, long maxBytes = 5 * 1024 * 1024)
     {
-        if (file.Length == 0)
+        if (file == null || file.Length == 0)
             return (null, "No file selected.");
 
         if (file.Length > maxBytes)
@@ -34,7 +39,8 @@ public class UploadStorageService : IUploadStorageService
         if (ext == null)
             return (null, "Invalid image. Use JPG, PNG, WEBP or GIF.");
 
-        var dir = Path.Combine(UploadsRoot, subfolder);
+        var safeSubfolder = SanitizeSegment(subfolder);
+        var dir = Path.Combine(UploadsRoot, safeSubfolder);
         Directory.CreateDirectory(dir);
 
         var fileName = $"{Guid.NewGuid():N}{ext}";
@@ -42,8 +48,9 @@ public class UploadStorageService : IUploadStorageService
 
         try
         {
-            await using var stream = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            await using var stream = new FileStream(fullPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
             await file.CopyToAsync(stream);
+            await stream.FlushAsync();
         }
         catch (Exception ex)
         {
@@ -51,28 +58,43 @@ public class UploadStorageService : IUploadStorageService
             return (null, "Could not save file. Please try again.");
         }
 
-        return ($"/uploads/{subfolder}/{fileName}", null);
+        return ($"/images/{safeSubfolder}/{fileName}", null);
     }
 
     public Task DeleteIfExistsAsync(string? publicUrl)
     {
-        if (string.IsNullOrEmpty(publicUrl) || !publicUrl.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrEmpty(publicUrl))
             return Task.CompletedTask;
 
-        var relative = publicUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+        var pathOnly = publicUrl.Split('?', 2)[0];
 
-        // App_Data/uploads/...
-        var appDataPath = Path.Combine(_env.ContentRootPath, "App_Data", relative);
-        TryDelete(appDataPath);
-
-        // Legacy wwwroot/uploads/...
-        if (!string.IsNullOrEmpty(_env.WebRootPath))
+        if (pathOnly.StartsWith("/images/", StringComparison.OrdinalIgnoreCase))
         {
-            var wwwPath = Path.Combine(_env.WebRootPath, relative);
-            TryDelete(wwwPath);
+            var relative = pathOnly["/images/".Length..].Replace('/', Path.DirectorySeparatorChar);
+            TryDelete(Path.Combine(UploadsRoot, relative));
+
+            // Legacy files previously saved under wwwroot/images
+            if (!string.IsNullOrEmpty(_env.WebRootPath))
+                TryDelete(Path.Combine(_env.WebRootPath, "images", relative));
+
+            return Task.CompletedTask;
+        }
+
+        if (pathOnly.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+        {
+            var relative = pathOnly.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+            TryDelete(Path.Combine(_env.ContentRootPath, "App_Data", relative));
+            if (!string.IsNullOrEmpty(_env.WebRootPath))
+                TryDelete(Path.Combine(_env.WebRootPath, relative));
         }
 
         return Task.CompletedTask;
+    }
+
+    private static string SanitizeSegment(string segment)
+    {
+        var cleaned = string.Concat((segment ?? "misc").Where(c => char.IsLetterOrDigit(c) || c is '-' or '_'));
+        return string.IsNullOrWhiteSpace(cleaned) ? "misc" : cleaned.ToLowerInvariant();
     }
 
     private static void TryDelete(string path)

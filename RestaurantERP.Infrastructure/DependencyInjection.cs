@@ -36,6 +36,9 @@ public static class DependencyInjection
         .AddDefaultTokenProviders();
 
         services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
+        services.Configure<RestaurantERP.Application.Options.MailjetOptions>(
+            configuration.GetSection(RestaurantERP.Application.Options.MailjetOptions.SectionName));
+        services.AddHttpClient<IEmailSender, MailjetEmailSender>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IAuditService, AuditService>();

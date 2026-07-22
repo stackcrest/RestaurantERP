@@ -2,10 +2,17 @@ using RestaurantERP.Domain.Common;
 
 namespace RestaurantERP.Domain.Entities;
 
+/// <summary>
+/// Promotional offer / coupon. Drives homepage CTAs and checkout discounts.
+/// </summary>
 public class Coupon : BaseEntity
 {
     public string Code { get; set; } = string.Empty;
+    public string? Title { get; set; }
     public string? Description { get; set; }
+    public string? Subtitle { get; set; }
+    public string? BadgeText { get; set; }
+    public string? CtaText { get; set; }
     public decimal DiscountPercentage { get; set; }
     public decimal? MaxDiscountAmount { get; set; }
     public decimal? MinimumOrderAmount { get; set; }
@@ -14,6 +21,9 @@ public class Coupon : BaseEntity
     public int? UsageLimit { get; set; }
     public int UsedCount { get; set; }
     public bool IsActive { get; set; } = true;
+    public bool ShowOnHomepage { get; set; }
+    public bool FirstOrderOnly { get; set; }
+    public int Priority { get; set; }
 }
 
 public class Review : BaseEntity

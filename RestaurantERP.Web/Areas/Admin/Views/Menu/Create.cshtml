@@ -34,7 +34,8 @@
                         </a>
                     </div>
 
-                    <form asp-action="Create" method="post">
+                    <form asp-action="Create" method="post" enctype="multipart/form-data" novalidate>
+                        @Html.AntiForgeryToken()
                         <div class="row">
                             <div class="col-md-8 mb-3">
                                 <label class="form-label">Name *</label>
@@ -78,10 +79,17 @@
                                 <label class="form-label">Preparation Time (minutes)</label>
                                 <input type="number" name="preparationTime" class="form-control" value="15" />
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Image URL</label>
-                                <input type="url" name="imageUrl" class="form-control" placeholder="https://..." />
-                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Upload Image</label>
+                            <input type="file" name="imageFile" class="form-control" accept="image/jpeg,image/png,image/webp,image/gif" />
+                            <div class="form-text">JPG, PNG, WEBP or GIF up to 5 MB</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Or Image URL</label>
+                            <input type="text" name="imageUrl" class="form-control" placeholder="@AppContent.Get("placeholder.image_url", "https://... or /images/...")" />
+                            <div class="form-text">Used when no file is uploaded</div>
                         </div>
 
                         <div class="mb-4">

@@ -30,8 +30,11 @@ public class OrdersController : Controller
         _userManager = userManager;
     }
 
-    public async Task<IActionResult> Index(string? status, string? type)
+    public async Task<IActionResult> Index(string? status, string? type, int page = 1)
     {
+        const int pageSize = 25;
+        if (page < 1) page = 1;
+
         var query = _context.Orders.Include(o => o.User).Include(o => o.Items).AsQueryable();
 
         if (!string.IsNullOrEmpty(status) && Enum.TryParse<OrderStatus>(status, out var s))
@@ -42,10 +45,23 @@ public class OrdersController : Controller
         if (!string.IsNullOrEmpty(type) && Enum.TryParse<OrderType>(type, out var t))
             query = query.Where(o => o.OrderType == t);
 
-        var orders = await query.OrderByDescending(o => o.CreatedAt).Take(100).ToListAsync();
+        var total = await query.CountAsync();
+        var orders = await query.OrderByDescending(o => o.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
         ViewBag.CurrentStatus = status;
         ViewBag.CurrentType = type;
         ViewBag.AreaPrefix = "/Admin";
+        ViewBag.CurrentPage = page;
+        ViewBag.TotalPages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+
+        var qs = new List<string>();
+        if (!string.IsNullOrEmpty(status)) qs.Add($"status={Uri.EscapeDataString(status)}");
+        if (!string.IsNullOrEmpty(type)) qs.Add($"type={Uri.EscapeDataString(type)}");
+        ViewBag.PaginationBaseUrl = "/Admin/Orders" + (qs.Count > 0 ? "?" + string.Join("&", qs) : "");
+
         return View(orders);
     }
 

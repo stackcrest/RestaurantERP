@@ -1,0 +1,280 @@
+/* Classic professional site chrome — loaded by _Layout */
+
+body {
+    font-family: 'Source Sans 3', system-ui, sans-serif;
+}
+
+.brand-font,
+.hero h1,
+.section-title,
+.site-navbar .navbar-brand {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+}
+
+.site-topbar {
+    background: var(--secondary);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+}
+
+.site-topbar a {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+}
+
+.site-topbar a:hover {
+    color: #fff;
+}
+
+.site-topbar .offer-chip {
+    background: var(--primary);
+    color: #fff;
+    padding: 0.15rem 0.65rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.site-navbar {
+    background: #fff !important;
+    border-bottom: 1px solid rgba(29, 53, 87, 0.08);
+    min-height: 72px;
+    box-shadow: 0 8px 24px rgba(29, 53, 87, 0.06) !important;
+    z-index: 1030;
+}
+
+.site-navbar .navbar-brand {
+    font-weight: 700;
+    font-size: 1.75rem;
+    letter-spacing: 0.02em;
+    color: var(--secondary) !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.site-navbar .navbar-brand img {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+}
+
+.site-navbar .nav-link {
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--secondary) !important;
+    margin: 0 0.15rem;
+    padding: 0.55rem 0.85rem !important;
+    position: relative;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.site-navbar .nav-link::after {
+    content: '';
+    position: absolute;
+    left: 0.85rem;
+    right: 0.85rem;
+    bottom: 0.2rem;
+    height: 2px;
+    background: var(--primary);
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+}
+
+.site-navbar .nav-link:hover::after,
+.site-navbar .nav-link.active::after {
+    transform: scaleX(1);
+}
+
+.site-navbar .nav-link:hover,
+.site-navbar .nav-link.active {
+    color: var(--primary) !important;
+}
+
+.site-navbar .btn-primary {
+    background: var(--primary);
+    border: none;
+    padding: 0.55rem 1.35rem;
+    border-radius: 2px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+}
+
+.site-navbar .nav-avatar {
+    width: 28px;
+    height: 28px;
+    object-fit: cover;
+}
+
+.site-navbar .dropdown-menu {
+    border: 1px solid rgba(29, 53, 87, 0.1);
+    border-radius: 4px;
+    box-shadow: 0 12px 32px rgba(29, 53, 87, 0.12);
+    padding: 0.5rem;
+}
+
+.section-title::after {
+    height: 3px !important;
+    border-radius: 0 !important;
+}
+
+/* Closed mobile panel must never block page clicks */
+.site-nav-offcanvas:not(.show) {
+    pointer-events: none;
+}
+
+.site-nav-offcanvas.show {
+    pointer-events: auto;
+}
+
+/* Mobile / tablet: overlay menu */
+@media (max-width: 991.98px) {
+    .site-navbar .nav-link {
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: 1.05rem;
+        padding: 0.85rem 0.25rem !important;
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+    }
+
+    .site-navbar .nav-link::after {
+        display: none;
+    }
+
+    .site-nav-offcanvas {
+        width: min(86vw, 360px) !important;
+        border-left: none;
+        box-shadow: -8px 0 32px rgba(15, 23, 42, 0.18);
+        z-index: 1100;
+        background: #fff;
+    }
+
+    .site-nav-offcanvas .offcanvas-header {
+        padding: 1rem 1.25rem;
+        background: #fff;
+    }
+
+    .site-nav-offcanvas .offcanvas-body {
+        padding: 0.75rem 1.25rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+        overflow-y: auto;
+    }
+
+    .site-nav-offcanvas .navbar-nav {
+        width: 100%;
+        margin: 0 !important;
+    }
+
+    .site-nav-offcanvas .site-nav-actions {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid rgba(29, 53, 87, 0.1);
+        gap: 0.15rem;
+    }
+
+    .site-nav-offcanvas .site-nav-user-label {
+        display: inline !important;
+        font-size: 1rem !important;
+        text-transform: none !important;
+    }
+
+    .site-nav-offcanvas .btn-primary {
+        width: 100%;
+        margin: 0.5rem 0 0 !important;
+        padding: 0.85rem 1rem;
+        text-align: center;
+    }
+
+    /* Flat nested lists on mobile */
+    .site-nav-offcanvas .dropdown-menu {
+        display: block;
+        position: static !important;
+        float: none;
+        width: 100%;
+        margin: 0;
+        padding: 0 0 0.35rem 0.85rem;
+        border: 0;
+        box-shadow: none;
+        background: transparent;
+        transform: none !important;
+    }
+
+    .site-nav-offcanvas .dropdown-toggle::after {
+        display: none;
+    }
+
+    .site-nav-offcanvas .dropdown-item {
+        padding: 0.7rem 0.5rem;
+        font-weight: 500;
+        border-radius: 8px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+
+    .site-nav-offcanvas .dropdown-divider {
+        margin: 0.35rem 0;
+    }
+
+    .offcanvas-backdrop.show {
+        opacity: 0.55;
+        background-color: #0f172a;
+        z-index: 1090;
+        pointer-events: auto;
+    }
+}
+
+/* Desktop: normal inline navbar — never an overlay */
+@media (min-width: 992px) {
+    .site-nav-offcanvas,
+    .site-nav-offcanvas.show {
+        position: static !important;
+        visibility: visible !important;
+        transform: none !important;
+        z-index: auto !important;
+        background: transparent !important;
+        border: 0 !important;
+        width: auto !important;
+        height: auto !important;
+        max-width: none !important;
+        flex-grow: 1;
+        pointer-events: auto !important;
+        box-shadow: none !important;
+    }
+
+    .site-nav-offcanvas .offcanvas-header {
+        display: none !important;
+    }
+
+    .site-nav-offcanvas .offcanvas-body {
+        display: flex !important;
+        flex-direction: row;
+        flex-grow: 1;
+        align-items: center;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+
+    .site-nav-offcanvas .site-nav-user-label {
+        display: none;
+    }
+
+    /* Never leave a blocking backdrop on desktop */
+    .offcanvas-backdrop {
+        display: none !important;
+    }
+}
+
+@media (min-width: 1200px) {
+    .site-nav-offcanvas .site-nav-user-label {
+        display: inline;
+    }
+}
