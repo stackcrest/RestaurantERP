@@ -41,6 +41,7 @@ body {
     border-bottom: 1px solid rgba(29, 53, 87, 0.08);
     min-height: 72px;
     box-shadow: 0 8px 24px rgba(29, 53, 87, 0.06) !important;
+    z-index: 1030;
 }
 
 .site-navbar .navbar-brand {
@@ -121,7 +122,16 @@ body {
     border-radius: 0 !important;
 }
 
-/* Mobile: overlay menu over page (no layout push) */
+/* Closed mobile panel must never block page clicks */
+.site-nav-offcanvas:not(.show) {
+    pointer-events: none;
+}
+
+.site-nav-offcanvas.show {
+    pointer-events: auto;
+}
+
+/* Mobile / tablet: overlay menu */
 @media (max-width: 991.98px) {
     .site-navbar .nav-link {
         text-transform: none;
@@ -142,6 +152,7 @@ body {
         border-left: none;
         box-shadow: -8px 0 32px rgba(15, 23, 42, 0.18);
         z-index: 1100;
+        background: #fff;
     }
 
     .site-nav-offcanvas .offcanvas-header {
@@ -154,6 +165,7 @@ body {
         display: flex;
         flex-direction: column;
         gap: 0.35rem;
+        overflow-y: auto;
     }
 
     .site-nav-offcanvas .navbar-nav {
@@ -181,7 +193,7 @@ body {
         text-align: center;
     }
 
-    /* Expand nested menus as flat lists — fewer taps */
+    /* Flat nested lists on mobile */
     .site-nav-offcanvas .dropdown-menu {
         display: block;
         position: static !important;
@@ -215,31 +227,49 @@ body {
     .offcanvas-backdrop.show {
         opacity: 0.55;
         background-color: #0f172a;
+        z-index: 1090;
+        pointer-events: auto;
     }
 }
 
+/* Desktop: normal inline navbar — never an overlay */
 @media (min-width: 992px) {
-    .site-nav-offcanvas {
-        position: static;
+    .site-nav-offcanvas,
+    .site-nav-offcanvas.show {
+        position: static !important;
         visibility: visible !important;
         transform: none !important;
-        z-index: auto;
-        background: transparent;
-        border: 0;
+        z-index: auto !important;
+        background: transparent !important;
+        border: 0 !important;
         width: auto !important;
         height: auto !important;
+        max-width: none !important;
         flex-grow: 1;
+        pointer-events: auto !important;
+        box-shadow: none !important;
+    }
+
+    .site-nav-offcanvas .offcanvas-header {
+        display: none !important;
     }
 
     .site-nav-offcanvas .offcanvas-body {
-        display: flex;
+        display: flex !important;
+        flex-direction: row;
         flex-grow: 1;
-        padding: 0;
-        overflow: visible;
+        align-items: center;
+        padding: 0 !important;
+        overflow: visible !important;
     }
 
     .site-nav-offcanvas .site-nav-user-label {
         display: none;
+    }
+
+    /* Never leave a blocking backdrop on desktop */
+    .offcanvas-backdrop {
+        display: none !important;
     }
 }
 
