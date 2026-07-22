@@ -24,22 +24,6 @@ public class MenuController : Controller
     {
         var items = await _context.MenuItems.Include(m => m.Category)
             .Where(m => !m.IsDeleted)
-            .AsQueryable();
-
-        if (categoryId.HasValue)
-            query = query.Where(m => m.CategoryId == categoryId.Value);
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim();
-            query = query.Where(m =>
-                m.Name.Contains(term)
-                || (m.Description != null && m.Description.Contains(term))
-                || m.Category.Name.Contains(term));
-        }
-
-        var total = await query.CountAsync();
-        var items = await query
             .OrderBy(m => m.Category.DisplayOrder).ThenBy(m => m.Name)
             .ToListAsync();
         ViewBag.Categories = await _context.Categories
@@ -148,34 +132,20 @@ public class MenuController : Controller
         return RedirectToAction("Index");
     }
 
-    public async Task<IActionResult> Edit(Guid id, int page = 1, Guid? categoryId = null, string? search = null)
+    public async Task<IActionResult> Edit(Guid id)
     {
         var item = await _context.MenuItems.FindAsync(id);
         if (item == null || item.IsDeleted) return NotFound();
         ViewBag.Categories = await _context.Categories.Where(c => c.IsActive && !c.IsDeleted).ToListAsync();
-        ViewBag.ReturnPage = page < 1 ? 1 : page;
-        ViewBag.ReturnCategoryId = categoryId;
-        ViewBag.ReturnSearch = search;
         return View(item);
     }
 
     [HttpPost]
     public async Task<IActionResult> Edit(Guid id, string name, string? description, decimal basePrice, Guid categoryId,
-        bool isVeg, string spiceLevel, bool isFeatured, bool isAvailable, int preparationTime,
-        string? imageUrl, IFormFile? imageFile,
-        int returnPage = 1, Guid? returnCategoryId = null, string? returnSearch = null)
+        bool isVeg, string spiceLevel, bool isFeatured, bool isAvailable, int preparationTime, string? imageUrl)
     {
         var item = await _context.MenuItems.FindAsync(id);
         if (item == null || item.IsDeleted) return NotFound();
-
-        var resolvedImage = await ResolveImageAsync(imageFile, imageUrl, item.ImageUrl);
-        if (resolvedImage.Error != null)
-        {
-            TempData["Error"] = resolvedImage.Error;
-            return RedirectToAction("Edit", BuildEditRoute(id, returnPage, returnCategoryId, returnSearch));
-        }
-
-        var previousImage = item.ImageUrl;
 
         item.Name = name;
         item.Description = description;
@@ -191,11 +161,11 @@ public class MenuController : Controller
 
         await _context.SaveChangesAsync();
         TempData["Success"] = "Menu item updated!";
-        return RedirectToAction(nameof(Index), BuildIndexRoute(returnPage, returnCategoryId, returnSearch));
+        return RedirectToAction("Index");
     }
 
     [HttpPost]
-    public async Task<IActionResult> ToggleAvailability(Guid id, int page = 1, Guid? categoryId = null, string? search = null)
+    public async Task<IActionResult> ToggleAvailability(Guid id)
     {
         var item = await _context.MenuItems.FindAsync(id);
         if (item != null && !item.IsDeleted)
@@ -203,11 +173,11 @@ public class MenuController : Controller
             item.IsAvailable = !item.IsAvailable;
             await _context.SaveChangesAsync();
         }
-        return RedirectToAction(nameof(Index), BuildIndexRoute(page, categoryId, search));
+        return RedirectToAction("Index");
     }
 
     [HttpPost]
-    public async Task<IActionResult> Delete(Guid id, int page = 1, Guid? categoryId = null, string? search = null)
+    public async Task<IActionResult> Delete(Guid id)
     {
         var item = await _context.MenuItems.FindAsync(id);
         if (item != null)
@@ -216,24 +186,6 @@ public class MenuController : Controller
             await _context.SaveChangesAsync();
             TempData["Success"] = "Menu item deleted.";
         }
-        return RedirectToAction(nameof(Index), BuildIndexRoute(page, categoryId, search));
-    }
-
-    private static object BuildIndexRoute(int page, Guid? categoryId, string? search)
-    {
-        var route = new Dictionary<string, object?>();
-        if (page > 1) route["page"] = page;
-        if (categoryId.HasValue) route["categoryId"] = categoryId.Value;
-        if (!string.IsNullOrWhiteSpace(search)) route["search"] = search.Trim();
-        return route;
-    }
-
-    private static object BuildEditRoute(Guid id, int page, Guid? categoryId, string? search)
-    {
-        var route = new Dictionary<string, object?> { ["id"] = id };
-        if (page > 1) route["page"] = page;
-        if (categoryId.HasValue) route["categoryId"] = categoryId.Value;
-        if (!string.IsNullOrWhiteSpace(search)) route["search"] = search.Trim();
-        return route;
+        return RedirectToAction("Index");
     }
 }

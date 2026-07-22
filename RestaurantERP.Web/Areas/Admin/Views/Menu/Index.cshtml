@@ -1,27 +1,12 @@
 @model List<RestaurantERP.Domain.Entities.MenuItem>
 @{
     ViewData["Title"] = "Menu Management";
-    var categories = ViewBag.Categories as List<RestaurantERP.Domain.Entities.Category> ?? new();
-    var search = ViewBag.Search as string;
-    var categoryId = ViewBag.CategoryId as Guid?;
-    var currentPage = (int)(ViewBag.CurrentPage ?? 1);
-    var totalCount = (int)(ViewBag.TotalCount ?? Model.Count);
-
-    string EditUrl(Guid id)
-    {
-        var parts = new List<string>();
-        if (currentPage > 1) parts.Add($"page={currentPage}");
-        if (categoryId.HasValue) parts.Add($"categoryId={categoryId}");
-        if (!string.IsNullOrWhiteSpace(search)) parts.Add($"search={Uri.EscapeDataString(search)}");
-        return parts.Count == 0
-            ? $"/Admin/Menu/Edit/{id}"
-            : $"/Admin/Menu/Edit/{id}?{string.Join("&", parts)}";
-    }
+    var categories = ViewBag.Categories as List<RestaurantERP.Domain.Entities.Category>;
 }
 
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div>
-        @if (categories.Count == 0)
+        @if (categories?.Any() != true)
         {
             <div class="alert alert-info mb-0 py-2 px-3 small">
                 <i class="bi bi-info-circle me-1"></i>
@@ -45,152 +30,64 @@
     <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
-<div class="card mb-3">
-    <div class="card-body">
-        <form method="get" asp-action="Index" class="row g-3 align-items-end">
-            <div class="col-md-5">
-                <label class="form-label fw-medium" for="menuSearch">Search menu</label>
-                <div class="input-group">
-                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                    <input type="search" name="search" id="menuSearch" value="@search" class="form-control"
-                           placeholder="Search by name, description, or category…" autocomplete="off" />
-                </div>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label fw-medium" for="categoryId">Category</label>
-                <select name="categoryId" id="categoryId" class="form-select">
-                    <option value="">All categories</option>
-                    @foreach (var cat in categories)
-                    {
-                        if (categoryId == cat.Id)
-                        {
-                            <option value="@cat.Id" selected>@cat.Name</option>
-                        }
-                        else
-                        {
-                            <option value="@cat.Id">@cat.Name</option>
-                        }
-                    }
-                </select>
-            </div>
-            <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-primary flex-grow-1">
-                    <i class="bi bi-funnel me-1"></i>Filter
-                </button>
-                @if (!string.IsNullOrWhiteSpace(search) || categoryId.HasValue)
-                {
-                    <a href="/Admin/Menu" class="btn btn-outline-secondary">Clear</a>
-                }
-            </div>
-        </form>
-        <div class="small text-muted mt-2">
-            @if (!string.IsNullOrWhiteSpace(search) || categoryId.HasValue)
-            {
-                <span>Found <strong>@totalCount</strong> item@(totalCount == 1 ? "" : "s")</span>
-                @if (!string.IsNullOrWhiteSpace(search))
-                {
-                    <span> matching “@search”</span>
-                }
-            }
-            else
-            {
-                <span>@totalCount menu item@(totalCount == 1 ? "" : "s")</span>
-            }
-        </div>
-    </div>
-</div>
-
 <div class="card">
     <div class="card-body p-0">
-        @if (!Model.Any())
-        {
-            <div class="text-center text-muted py-5 px-3">
-                <i class="bi bi-search d-block mb-2" style="font-size: 1.75rem;"></i>
-                <p class="mb-2 fw-medium">No menu items found</p>
-                <p class="small mb-3">Try a different search, clear filters, or add a new item.</p>
-                <div class="d-flex justify-content-center gap-2 flex-wrap">
-                    <a href="/Admin/Menu" class="btn btn-outline-secondary btn-sm">Clear filters</a>
-                    <a href="/Admin/Menu/Create" class="btn btn-primary btn-sm">Add Item</a>
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 60px;"></th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
                         <tr>
-                            <th style="width: 60px;"></th>
-                            <th>Name</th>
-                            <th>Category</th>
-                            <th>Price</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <td>
+                                <img src="@(item.ImageUrl ?? $"https://picsum.photos/seed/{item.Id}/100/100")" 
+                                     class="rounded" style="width: 50px; height: 50px; object-fit: cover;">
+                            </td>
+                            <td>
+                                <span class="fw-medium">@item.Name</span>
+                                @if (item.IsFeatured) { <span class="badge bg-warning text-dark ms-1">Featured</span> }
+                            </td>
+                            <td>@item.Category.Name</td>
+                            <td class="fw-bold">₹@item.BasePrice</td>
+                            <td>
+                                @if (item.IsVeg)
+                                {
+                                    <span class="badge bg-success">Veg</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Non-Veg</span>
+                                }
+                            </td>
+                            <td>
+                                <form asp-action="ToggleAvailability" method="post" class="d-inline">
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <button type="submit" class="btn btn-sm @(item.IsAvailable ? "btn-success" : "btn-secondary")">
+                                        @(item.IsAvailable ? "Available" : "Unavailable")
+                                    </button>
+                                </form>
+                            </td>
+                            <td>
+                                <a href="/Admin/Menu/Edit/@item.Id" class="btn btn-sm btn-outline-primary me-1">Edit</a>
+                                <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Delete this item?')">
+                                    <input type="hidden" name="id" value="@item.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model)
-                        {
-                            <tr>
-                                <td>
-                                    <img src="@(item.ImageUrl ?? $"https://picsum.photos/seed/{item.Id}/100/100")"
-                                         class="rounded" style="width: 50px; height: 50px; object-fit: cover;" alt="@item.Name">
-                                </td>
-                                <td>
-                                    <span class="fw-medium">@item.Name</span>
-                                    @if (item.IsFeatured) { <span class="badge bg-warning text-dark ms-1">Featured</span> }
-                                </td>
-                                <td>@item.Category.Name</td>
-                                <td class="fw-bold">₹@item.BasePrice</td>
-                                <td>
-                                    @if (item.IsVeg)
-                                    {
-                                        <span class="badge bg-success">Veg</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-danger">Non-Veg</span>
-                                    }
-                                </td>
-                                <td>
-                                    <form asp-action="ToggleAvailability" method="post" class="d-inline">
-                                        <input type="hidden" name="id" value="@item.Id" />
-                                        <input type="hidden" name="page" value="@currentPage" />
-                                        @if (categoryId.HasValue)
-                                        {
-                                            <input type="hidden" name="categoryId" value="@categoryId" />
-                                        }
-                                        @if (!string.IsNullOrWhiteSpace(search))
-                                        {
-                                            <input type="hidden" name="search" value="@search" />
-                                        }
-                                        <button type="submit" class="btn btn-sm @(item.IsAvailable ? "btn-success" : "btn-secondary")">
-                                            @(item.IsAvailable ? "Available" : "Unavailable")
-                                        </button>
-                                    </form>
-                                </td>
-                                <td>
-                                    <a href="@EditUrl(item.Id)" class="btn btn-sm btn-outline-primary me-1">Edit</a>
-                                    <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Delete this item?')">
-                                        <input type="hidden" name="id" value="@item.Id" />
-                                        <input type="hidden" name="page" value="@currentPage" />
-                                        @if (categoryId.HasValue)
-                                        {
-                                            <input type="hidden" name="categoryId" value="@categoryId" />
-                                        }
-                                        @if (!string.IsNullOrWhiteSpace(search))
-                                        {
-                                            <input type="hidden" name="search" value="@search" />
-                                        }
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
+                    }
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
