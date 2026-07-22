@@ -39,7 +39,13 @@ public class MenuController : Controller
             query = query.Where(m => m.CategoryId == categoryId.Value);
 
         if (!string.IsNullOrWhiteSpace(search))
-            query = query.Where(m => m.Name.Contains(search));
+        {
+            var term = search.Trim();
+            query = query.Where(m =>
+                m.Name.Contains(term)
+                || (m.Description != null && m.Description.Contains(term))
+                || m.Category.Name.Contains(term));
+        }
 
         var total = await query.CountAsync();
         var items = await query
@@ -177,11 +183,14 @@ public class MenuController : Controller
         return RedirectToAction("Index");
     }
 
-    public async Task<IActionResult> Edit(Guid id)
+    public async Task<IActionResult> Edit(Guid id, int page = 1, Guid? categoryId = null, string? search = null)
     {
         var item = await _context.MenuItems.FindAsync(id);
         if (item == null || item.IsDeleted) return NotFound();
         ViewBag.Categories = await _context.Categories.Where(c => c.IsActive && !c.IsDeleted).ToListAsync();
+        ViewBag.ReturnPage = page < 1 ? 1 : page;
+        ViewBag.ReturnCategoryId = categoryId;
+        ViewBag.ReturnSearch = search;
         return View(item);
     }
 
@@ -191,7 +200,8 @@ public class MenuController : Controller
     [RequestFormLimits(MultipartBodyLengthLimit = 10 * 1024 * 1024)]
     public async Task<IActionResult> Edit(Guid id, string name, string? description, decimal basePrice, Guid categoryId,
         bool isVeg, string spiceLevel, bool isFeatured, bool isAvailable, int preparationTime,
-        string? imageUrl, IFormFile? imageFile)
+        string? imageUrl, IFormFile? imageFile,
+        int returnPage = 1, Guid? returnCategoryId = null, string? returnSearch = null)
     {
         var item = await _context.MenuItems.FindAsync(id);
         if (item == null || item.IsDeleted) return NotFound();
@@ -200,7 +210,7 @@ public class MenuController : Controller
         if (resolvedImage.Error != null)
         {
             TempData["Error"] = resolvedImage.Error;
-            return RedirectToAction("Edit", new { id });
+            return RedirectToAction("Edit", BuildEditRoute(id, returnPage, returnCategoryId, returnSearch));
         }
 
         var previousImage = item.ImageUrl;
@@ -229,11 +239,11 @@ public class MenuController : Controller
         }
 
         TempData["Success"] = "Menu item updated!";
-        return RedirectToAction("Index");
+        return RedirectToAction(nameof(Index), BuildIndexRoute(returnPage, returnCategoryId, returnSearch));
     }
 
     [HttpPost]
-    public async Task<IActionResult> ToggleAvailability(Guid id)
+    public async Task<IActionResult> ToggleAvailability(Guid id, int page = 1, Guid? categoryId = null, string? search = null)
     {
         var item = await _context.MenuItems.FindAsync(id);
         if (item != null && !item.IsDeleted)
@@ -241,11 +251,11 @@ public class MenuController : Controller
             item.IsAvailable = !item.IsAvailable;
             await _context.SaveChangesAsync();
         }
-        return RedirectToAction("Index");
+        return RedirectToAction(nameof(Index), BuildIndexRoute(page, categoryId, search));
     }
 
     [HttpPost]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id, int page = 1, Guid? categoryId = null, string? search = null)
     {
         var item = await _context.MenuItems.FindAsync(id);
         if (item != null)
@@ -254,7 +264,25 @@ public class MenuController : Controller
             await _context.SaveChangesAsync();
             TempData["Success"] = "Menu item deleted.";
         }
-        return RedirectToAction("Index");
+        return RedirectToAction(nameof(Index), BuildIndexRoute(page, categoryId, search));
+    }
+
+    private static object BuildIndexRoute(int page, Guid? categoryId, string? search)
+    {
+        var route = new Dictionary<string, object?>();
+        if (page > 1) route["page"] = page;
+        if (categoryId.HasValue) route["categoryId"] = categoryId.Value;
+        if (!string.IsNullOrWhiteSpace(search)) route["search"] = search.Trim();
+        return route;
+    }
+
+    private static object BuildEditRoute(Guid id, int page, Guid? categoryId, string? search)
+    {
+        var route = new Dictionary<string, object?> { ["id"] = id };
+        if (page > 1) route["page"] = page;
+        if (categoryId.HasValue) route["categoryId"] = categoryId.Value;
+        if (!string.IsNullOrWhiteSpace(search)) route["search"] = search.Trim();
+        return route;
     }
 
     private async Task<(string? Url, string? Error)> ResolveImageAsync(
