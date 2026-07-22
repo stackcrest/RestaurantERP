@@ -82,6 +82,14 @@ using (var scope = app.Services.CreateScope())
 var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "App_Data", "uploads");
 Directory.CreateDirectory(uploadsPath);
 
+// Keep uploads OUTSIDE wwwroot so saving images does not restart the app (dotnet watch / Hot Reload).
+var imagesPath = Path.Combine(app.Environment.ContentRootPath, "App_Data", "images");
+Directory.CreateDirectory(imagesPath);
+Directory.CreateDirectory(Path.Combine(imagesPath, "menu"));
+Directory.CreateDirectory(Path.Combine(imagesPath, "theme"));
+Directory.CreateDirectory(Path.Combine(imagesPath, "avatars"));
+Directory.CreateDirectory(Path.Combine(imagesPath, "categories"));
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -94,11 +102,31 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(imagesPath),
+    RequestPath = "/images"
+});
+
+// Legacy App_Data uploads (older files)
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(uploadsPath),
     RequestPath = "/uploads"
 });
+
+// Legacy files previously written to wwwroot/images (before App_Data move)
+var legacyWwwImages = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), "images");
+if (Directory.Exists(legacyWwwImages))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(legacyWwwImages),
+        RequestPath = "/images"
+    });
+}
+
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

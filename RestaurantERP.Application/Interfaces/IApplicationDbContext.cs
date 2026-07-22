@@ -5,6 +5,7 @@ namespace RestaurantERP.Application.Interfaces;
 
 public interface IApplicationDbContext
 {
+    DbSet<ApplicationUser> Users { get; }
     DbSet<Category> Categories { get; }
     DbSet<MenuItem> MenuItems { get; }
     DbSet<MenuItemVariant> MenuItemVariants { get; }

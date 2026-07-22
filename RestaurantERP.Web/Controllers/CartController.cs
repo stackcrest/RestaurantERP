@@ -162,11 +162,21 @@ public class CartController : BaseController
         return RedirectToAction("Index");
     }
 
-    [Authorize]
+    [AllowAnonymous]
     [HttpPost]
     [IgnoreAntiforgeryToken]
     public async Task<IActionResult> QuickAdd([FromBody] QuickCartRequest request)
     {
+        if (User.Identity?.IsAuthenticated != true)
+        {
+            return Json(new
+            {
+                success = false,
+                requiresAuth = true,
+                joinUrl = "/Account/QuickJoin?returnUrl=" + Uri.EscapeDataString("/Menu")
+            });
+        }
+
         if (!await CanPlaceCustomerOrdersAsync())
             return StaffOrderBlockedResult(json: true);
 
@@ -178,7 +188,7 @@ public class CartController : BaseController
 
         if (hasOptions)
         {
-            return Json(new { success = false, requiresOptions = true, detailUrl = $"/Menu/Details/{request.MenuItemId}" });
+            return Json(new { success = false, requiresOptions = true, menuItemId = request.MenuItemId });
         }
 
         var existing = await _context.CartItems.FirstOrDefaultAsync(c =>
@@ -191,6 +201,44 @@ public class CartController : BaseController
 
         await _context.SaveChangesAsync();
         return Json(await BuildCartResponseAsync(user.Id, request.MenuItemId));
+    }
+
+    [HttpPost]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> QuickAddConfigured([FromBody] QuickCartConfiguredRequest request)
+    {
+        if (!await CanPlaceCustomerOrdersAsync())
+            return StaffOrderBlockedResult(json: true);
+
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var qty = request.Quantity > 0 ? request.Quantity : 1;
+        var addOnStr = request.AddOnIds?.Any() == true
+            ? string.Join(",", request.AddOnIds.OrderBy(x => x))
+            : null;
+
+        var existing = await _context.CartItems.FirstOrDefaultAsync(c =>
+            c.UserId == user.Id && c.MenuItemId == request.MenuItemId &&
+            c.VariantId == request.VariantId && c.AddOnIds == addOnStr);
+
+        if (existing != null)
+            existing.Quantity += qty;
+        else
+        {
+            _context.CartItems.Add(new CartItem
+            {
+                UserId = user.Id,
+                MenuItemId = request.MenuItemId,
+                VariantId = request.VariantId,
+                Quantity = qty,
+                AddOnIds = addOnStr
+            });
+        }
+
+        await _context.SaveChangesAsync();
+        var response = await BuildCartResponseAsync(user.Id, request.MenuItemId);
+        return Json(response);
     }
 
     [Authorize]
@@ -345,6 +393,14 @@ public class CartController : BaseController
 public class QuickCartRequest
 {
     public Guid MenuItemId { get; set; }
+    public int Quantity { get; set; } = 1;
+}
+
+public class QuickCartConfiguredRequest
+{
+    public Guid MenuItemId { get; set; }
+    public Guid? VariantId { get; set; }
+    public List<Guid>? AddOnIds { get; set; }
     public int Quantity { get; set; } = 1;
 }
 

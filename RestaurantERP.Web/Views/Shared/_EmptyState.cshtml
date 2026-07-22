@@ -1,0 +1,25 @@
+@*
+  Shared empty state.
+  ViewBag.EmptyIcon, EmptyTitle, EmptyMessage, EmptyCtaText, EmptyCtaUrl
+*@
+@{
+    var icon = (string?)ViewBag.EmptyIcon ?? "bi-inbox";
+    var title = (string?)ViewBag.EmptyTitle ?? "Nothing here yet";
+    var message = (string?)ViewBag.EmptyMessage ?? "";
+    var ctaText = (string?)ViewBag.EmptyCtaText;
+    var ctaUrl = (string?)ViewBag.EmptyCtaUrl ?? "/Menu";
+}
+<div class="text-center py-5 px-3 empty-state">
+    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3" style="width: 88px; height: 88px;">
+        <i class="bi @icon text-muted" style="font-size: 2.25rem;"></i>
+    </div>
+    <h5 class="fw-bold mb-2">@title</h5>
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <p class="text-muted mb-3 mx-auto" style="max-width: 320px;">@message</p>
+    }
+    @if (!string.IsNullOrEmpty(ctaText))
+    {
+        <a href="@ctaUrl" class="btn btn-primary btn-lg px-4">@ctaText</a>
+    }
+</div>

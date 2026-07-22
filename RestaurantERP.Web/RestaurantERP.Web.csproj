@@ -21,7 +21,9 @@
   <!-- Prevent dotnet watch / hot reload restart when users upload files -->
   <ItemGroup>
     <Watch Remove="wwwroot\uploads\**\*" />
+    <Watch Remove="wwwroot\images\**\*" />
     <Watch Remove="App_Data\**\*" />
+    <Content Remove="App_Data\**\*" />
   </ItemGroup>
 
   <ItemGroup>

@@ -17,6 +17,7 @@ public class OrdersController : BaseController
     private readonly IOrderTrackingService _trackingService;
     private readonly ICommissionService _commissionService;
     private readonly IWhatsAppIntegrationService _whatsApp;
+    private readonly ICouponService _offers;
 
     public OrdersController(
         UserManager<ApplicationUser> userManager,
@@ -25,7 +26,8 @@ public class OrdersController : BaseController
         IDeliveryZoneService deliveryZoneService,
         IOrderTrackingService trackingService,
         ICommissionService commissionService,
-        IWhatsAppIntegrationService whatsApp)
+        IWhatsAppIntegrationService whatsApp,
+        ICouponService offers)
         : base(userManager, context)
     {
         _config = config;
@@ -33,6 +35,7 @@ public class OrdersController : BaseController
         _trackingService = trackingService;
         _commissionService = commissionService;
         _whatsApp = whatsApp;
+        _offers = offers;
     }
 
     public async Task<IActionResult> Index()
@@ -79,8 +82,36 @@ public class OrdersController : BaseController
         var user = await GetCurrentUserAsync();
         if (user == null) return RedirectToAction("Login", "Account");
 
-        var cartCount = await _context.CartItems.Where(c => c.UserId == user.Id).CountAsync();
-        if (cartCount == 0) return RedirectToAction("Index", "Cart");
+        var cartItems = await _context.CartItems
+            .Include(c => c.MenuItem)
+            .Include(c => c.Variant)
+            .Where(c => c.UserId == user.Id)
+            .ToListAsync();
+
+        if (!cartItems.Any()) return RedirectToAction("Index", "Cart");
+
+        var addOns = await _context.AddOns.ToListAsync();
+        decimal subTotal = 0;
+        foreach (var item in cartItems)
+        {
+            var unitPrice = item.MenuItem.BasePrice + (item.Variant?.PriceAdjustment ?? 0);
+            if (!string.IsNullOrEmpty(item.AddOnIds))
+            {
+                var ids = item.AddOnIds.Split(',').Select(Guid.Parse).ToList();
+                unitPrice += addOns.Where(a => ids.Contains(a.Id)).Sum(a => a.Price);
+            }
+            subTotal += unitPrice * item.Quantity;
+        }
+
+        var discountThreshold = _config.GetValue<decimal>("BusinessRules:DiscountThresholdAmount", 500);
+        var discountPercent = _config.GetValue<decimal>("BusinessRules:DiscountPercentage", 5);
+        var cgst = _config.GetValue<decimal>("BusinessRules:CGST", 2.5m);
+        var sgst = _config.GetValue<decimal>("BusinessRules:SGST", 2.5m);
+        var deliveryFee = _config.GetValue<decimal>("BusinessRules:DeliveryFee", 40);
+
+        var autoDiscount = subTotal >= discountThreshold ? Math.Round(subTotal * discountPercent / 100, 2) : 0;
+        var taxable = subTotal - autoDiscount;
+        var tax = Math.Round(taxable * (cgst + sgst) / 100, 2);
 
         var tables = await _context.Tables.Include(t => t.Section)
             .Where(t => t.Status == TableStatus.Available).ToListAsync();
@@ -88,7 +119,98 @@ public class OrdersController : BaseController
         ViewBag.Tables = tables;
         ViewBag.User = user;
         ViewBag.DeliveryConfig = await _deliveryZoneService.GetConfigAsync();
+        ViewBag.SubTotal = subTotal;
+        ViewBag.AutoDiscount = autoDiscount;
+        ViewBag.Tax = tax;
+        ViewBag.DeliveryFee = deliveryFee;
+        ViewBag.DiscountThreshold = discountThreshold;
+        ViewBag.DiscountPercent = discountPercent;
+        ViewBag.TakeawayTotal = taxable + tax;
+        ViewBag.DeliveryTotal = taxable + tax + deliveryFee;
         return View();
+    }
+
+    [HttpPost]
+    [IgnoreAntiforgeryToken]
+    public async Task<IActionResult> PreviewTotals([FromBody] PreviewTotalsRequest request)
+    {
+        if (!await CanPlaceCustomerOrdersAsync())
+            return StaffOrderBlockedResult(json: true);
+
+        var user = await GetCurrentUserAsync();
+        if (user == null) return Unauthorized();
+
+        var cartItems = await _context.CartItems
+            .Include(c => c.MenuItem)
+            .Include(c => c.Variant)
+            .Where(c => c.UserId == user.Id)
+            .ToListAsync();
+
+        var addOns = await _context.AddOns.ToListAsync();
+        decimal subTotal = 0;
+        foreach (var item in cartItems)
+        {
+            var unitPrice = item.MenuItem.BasePrice + (item.Variant?.PriceAdjustment ?? 0);
+            if (!string.IsNullOrEmpty(item.AddOnIds))
+            {
+                var ids = item.AddOnIds.Split(',').Select(Guid.Parse).ToList();
+                unitPrice += addOns.Where(a => ids.Contains(a.Id)).Sum(a => a.Price);
+            }
+            subTotal += unitPrice * item.Quantity;
+        }
+
+        var discountThreshold = _config.GetValue<decimal>("BusinessRules:DiscountThresholdAmount", 500);
+        var discountPercent = _config.GetValue<decimal>("BusinessRules:DiscountPercentage", 5);
+        var cgst = _config.GetValue<decimal>("BusinessRules:CGST", 2.5m);
+        var sgst = _config.GetValue<decimal>("BusinessRules:SGST", 2.5m);
+        var deliveryFee = _config.GetValue<decimal>("BusinessRules:DeliveryFee", 40);
+
+        var autoDiscount = subTotal >= discountThreshold ? Math.Round(subTotal * discountPercent / 100, 2) : 0;
+        decimal couponDiscount = 0;
+        string? couponMessage = null;
+        string? appliedCode = null;
+
+        if (!string.IsNullOrWhiteSpace(request.CouponCode))
+        {
+            var offerResult = await _offers.ValidateCouponAsync(request.CouponCode, subTotal, user.Id);
+            if (offerResult.Success)
+            {
+                couponDiscount = offerResult.Data?.CalculatedDiscount ?? 0;
+                appliedCode = offerResult.Data?.Code;
+                couponMessage = $"{appliedCode} applied — you save ₹{couponDiscount:N0}";
+            }
+            else
+            {
+                couponMessage = offerResult.Message;
+            }
+        }
+
+        var discount = Math.Max(autoDiscount, couponDiscount);
+        var discountLabel = couponDiscount > autoDiscount && appliedCode != null
+            ? $"Coupon ({appliedCode})"
+            : autoDiscount > 0 ? $"Auto discount ({discountPercent:0}%)" : "Discount";
+
+        var isDelivery = string.Equals(request.OrderType, "Delivery", StringComparison.OrdinalIgnoreCase);
+        var delivery = isDelivery ? deliveryFee : 0;
+        var taxable = subTotal - discount;
+        var tax = Math.Round(taxable * (cgst + sgst) / 100, 2);
+        var total = taxable + tax + delivery;
+
+        return Json(new
+        {
+            success = true,
+            subTotal,
+            autoDiscount,
+            couponDiscount,
+            discount,
+            discountLabel,
+            couponApplied = couponDiscount > 0,
+            couponValid = string.IsNullOrWhiteSpace(request.CouponCode) || couponDiscount > 0,
+            couponMessage,
+            tax,
+            deliveryFee = delivery,
+            total
+        });
     }
 
     [HttpPost]
@@ -114,7 +236,7 @@ public class OrdersController : BaseController
     public async Task<IActionResult> PlaceOrder(
         string orderType, string paymentMethod, Guid? tableId,
         string? address, string? city, string? pinCode, string? landmark,
-        double? latitude, double? longitude, string? notes)
+        double? latitude, double? longitude, string? notes, string? couponCode)
     {
         if (!await CanPlaceCustomerOrdersAsync())
             return StaffOrderBlockedResult();
@@ -190,7 +312,23 @@ public class OrdersController : BaseController
         var sgst = _config.GetValue<decimal>("BusinessRules:SGST", 2.5m);
         var deliveryFee = _config.GetValue<decimal>("BusinessRules:DeliveryFee", 40);
 
-        var discount = subTotal >= discountThreshold ? Math.Round(subTotal * discountPercent / 100, 2) : 0;
+        var autoDiscount = subTotal >= discountThreshold ? Math.Round(subTotal * discountPercent / 100, 2) : 0;
+        decimal couponDiscount = 0;
+        string? appliedCoupon = null;
+
+        if (!string.IsNullOrWhiteSpace(couponCode))
+        {
+            var offerResult = await _offers.ValidateCouponAsync(couponCode, subTotal, user.Id);
+            if (!offerResult.Success)
+            {
+                TempData["Error"] = offerResult.Message;
+                return RedirectToAction(nameof(Checkout));
+            }
+            couponDiscount = offerResult.Data?.CalculatedDiscount ?? 0;
+            appliedCoupon = offerResult.Data?.Code;
+        }
+
+        var discount = Math.Max(autoDiscount, couponDiscount);
         var taxable = subTotal - discount;
         var tax = Math.Round(taxable * (cgst + sgst) / 100, 2);
         var delivery = parsedOrderType == OrderType.Delivery ? deliveryFee : 0;
@@ -219,6 +357,7 @@ public class OrdersController : BaseController
             TaxAmount = tax,
             DeliveryFee = delivery,
             TotalAmount = total,
+            CouponCode = appliedCoupon,
             DeliveryAddress = fullAddress,
             DeliveryCity = city,
             DeliveryPinCode = pinCode,
@@ -239,6 +378,17 @@ public class OrdersController : BaseController
 
         _context.Orders.Add(order);
         _context.CartItems.RemoveRange(cartItems);
+
+        if (!string.IsNullOrEmpty(appliedCoupon))
+        {
+            var coupon = await _context.Coupons.FirstOrDefaultAsync(c => c.Code == appliedCoupon && !c.IsDeleted);
+            if (coupon != null)
+            {
+                coupon.UsedCount += 1;
+                coupon.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
         await _context.SaveChangesAsync();
 
         await _trackingService.RecordStatusAsync(order.Id, OrderStatus.Placed, user.Id, user.FullName, "Order placed by customer");
@@ -249,7 +399,8 @@ public class OrdersController : BaseController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Cancel(Guid id)
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Cancel(Guid id, string? returnTo = null)
     {
         if (!await CanPlaceCustomerOrdersAsync())
             return StaffOrderBlockedResult();
@@ -257,7 +408,7 @@ public class OrdersController : BaseController
         var user = await GetCurrentUserAsync();
         var order = await _context.Orders.FirstOrDefaultAsync(o => o.Id == id && o.UserId == user!.Id);
 
-        if (order != null && order.Status < OrderStatus.Preparing)
+        if (order != null && order.Status == OrderStatus.Placed)
         {
             order.Status = OrderStatus.Cancelled;
             await _context.SaveChangesAsync();
@@ -266,8 +417,12 @@ public class OrdersController : BaseController
         }
         else
         {
-            TempData["Error"] = "Order cannot be cancelled at this stage.";
+            TempData["Error"] = "Order can only be cancelled while status is Placed.";
         }
+
+        if (string.Equals(returnTo, "index", StringComparison.OrdinalIgnoreCase))
+            return RedirectToAction(nameof(Index));
+
         return RedirectToAction("Details", new { id });
     }
 }
@@ -276,4 +431,10 @@ public class DeliveryCheckRequest
 {
     public double Latitude { get; set; }
     public double Longitude { get; set; }
+}
+
+public class PreviewTotalsRequest
+{
+    public string? CouponCode { get; set; }
+    public string? OrderType { get; set; }
 }

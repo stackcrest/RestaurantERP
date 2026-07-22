@@ -7,6 +7,10 @@
 {
     <div class="alert alert-success">@TempData["Success"]</div>
 }
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
 
 <div class="row">
     <div class="col-lg-8">
@@ -15,7 +19,8 @@
                 <h6 class="mb-0 fw-bold">Brand Settings</h6>
             </div>
             <div class="card-body">
-                <form asp-action="Save" method="post">
+                <form asp-action="Save" method="post" enctype="multipart/form-data" novalidate>
+                    @Html.AntiForgeryToken()
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Restaurant Name</label>
@@ -29,12 +34,27 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Logo URL</label>
-                            <input type="url" name="logoUrl" class="form-control" value="@Model.LogoUrl" placeholder="https://..." />
+                            <label class="form-label">Logo</label>
+                            @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                            {
+                                <div class="mb-2">
+                                    <img src="@(Model.LogoUrl)?v=@Model.Version" alt="Logo" class="rounded border bg-white p-1" style="max-height: 72px; object-fit: contain;" />
+                                </div>
+                            }
+                            <input type="file" name="logoFile" class="form-control mb-2" accept="image/jpeg,image/png,image/webp,image/gif" />
+                            <input type="text" name="logoUrl" class="form-control" value="@Model.LogoUrl" placeholder="@AppContent.Get("placeholder.image_url", "https://... or /images/...")" />
+                            <div class="form-text">Upload GIF/PNG/JPG/WEBP, or paste a path/URL if no file is available</div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Favicon URL</label>
-                            <input type="url" name="faviconUrl" class="form-control" value="@Model.FaviconUrl" placeholder="https://..." />
+                            <label class="form-label">Favicon</label>
+                            @if (!string.IsNullOrEmpty(Model.FaviconUrl))
+                            {
+                                <div class="mb-2">
+                                    <img src="@(Model.FaviconUrl)?v=@Model.Version" alt="Favicon" class="rounded border bg-white p-1" style="max-height: 48px; object-fit: contain;" />
+                                </div>
+                            }
+                            <input type="file" name="faviconFile" class="form-control mb-2" accept="image/jpeg,image/png,image/webp,image/gif,image/x-icon" />
+                            <input type="text" name="faviconUrl" class="form-control" value="@Model.FaviconUrl" placeholder="@AppContent.Get("placeholder.image_url", "https://... or /images/...")" />
                         </div>
                     </div>
 
@@ -92,6 +112,10 @@
             <div class="card-body">
                 <div class="border rounded p-3" style="background: @(Model.SurfaceColor ?? "#F8F9FA");">
                     <div class="p-3 rounded text-white text-center mb-3" style="background: linear-gradient(135deg, @(Model.SecondaryColor ?? "#1D3557"), @(Model.PrimaryColor ?? "#E63946"));">
+                        @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                        {
+                            <img src="@(Model.LogoUrl)?v=@Model.Version" alt="Logo" class="mb-2" style="max-height: 48px; object-fit: contain;" />
+                        }
                         <h6 class="mb-1">@(Model.RestaurantName ?? "Restaurant Name")</h6>
                         <small>@(Model.Tagline ?? "Your tagline here")</small>
                     </div>

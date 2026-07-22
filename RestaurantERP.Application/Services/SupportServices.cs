@@ -152,43 +152,164 @@ public class CouponService : ICouponService
     private readonly IApplicationDbContext _context;
     public CouponService(IApplicationDbContext context) => _context = context;
 
-    public async Task<ApiResponse<CouponDto>> ValidateCouponAsync(string code, decimal orderAmount)
+    public async Task<ApiResponse<CouponDto>> ValidateCouponAsync(string code, decimal orderAmount, Guid? userId = null)
     {
         var coupon = await _context.Coupons.FirstOrDefaultAsync(c =>
-            c.Code == code && c.IsActive && c.ValidFrom <= DateTime.UtcNow && c.ValidTo >= DateTime.UtcNow);
-        if (coupon == null) return ApiResponse<CouponDto>.Fail("Invalid or expired coupon.");
-        if (coupon.MinimumOrderAmount.HasValue && orderAmount < coupon.MinimumOrderAmount)
-            return ApiResponse<CouponDto>.Fail($"Minimum order amount is ₹{coupon.MinimumOrderAmount}.");
+            c.Code == code.Trim().ToUpper() && !c.IsDeleted && c.IsActive
+            && c.ValidFrom <= DateTime.UtcNow && c.ValidTo >= DateTime.UtcNow);
 
-        return ApiResponse<CouponDto>.Ok(new CouponDto
+        if (coupon == null)
+            return ApiResponse<CouponDto>.Fail("Invalid or expired offer code.");
+
+        if (coupon.UsageLimit.HasValue && coupon.UsedCount >= coupon.UsageLimit.Value)
+            return ApiResponse<CouponDto>.Fail("This offer has reached its usage limit.");
+
+        if (coupon.MinimumOrderAmount.HasValue && orderAmount < coupon.MinimumOrderAmount)
+            return ApiResponse<CouponDto>.Fail($"Minimum order amount is ₹{coupon.MinimumOrderAmount:N0}.");
+
+        if (coupon.FirstOrderOnly && userId.HasValue)
         {
-            Code = coupon.Code, DiscountPercentage = coupon.DiscountPercentage,
-            CalculatedDiscount = Math.Round(orderAmount * coupon.DiscountPercentage / 100, 2)
-        });
+            var hasPriorOrder = await _context.Orders.AnyAsync(o =>
+                o.UserId == userId.Value && o.Status != Domain.Enums.OrderStatus.Cancelled);
+            if (hasPriorOrder)
+                return ApiResponse<CouponDto>.Fail("This offer is only valid on your first order.");
+        }
+
+        var discount = Math.Round(orderAmount * coupon.DiscountPercentage / 100, 2);
+        if (coupon.MaxDiscountAmount.HasValue)
+            discount = Math.Min(discount, coupon.MaxDiscountAmount.Value);
+
+        return ApiResponse<CouponDto>.Ok(Map(coupon, discount));
     }
 
     public async Task<ApiResponse<List<CouponDto>>> GetCouponsAsync()
     {
-        var coupons = await _context.Coupons.ToListAsync();
-        return ApiResponse<List<CouponDto>>.Ok(coupons.Select(c => new CouponDto
-        {
-            Id = c.Id, Code = c.Code, Description = c.Description,
-            DiscountPercentage = c.DiscountPercentage, IsActive = c.IsActive
-        }).ToList());
+        var coupons = await _context.Coupons
+            .Where(c => !c.IsDeleted)
+            .OrderByDescending(c => c.Priority)
+            .ThenByDescending(c => c.CreatedAt)
+            .ToListAsync();
+        return ApiResponse<List<CouponDto>>.Ok(coupons.Select(c => Map(c)).ToList());
+    }
+
+    public async Task<ApiResponse<CouponDto>> GetByIdAsync(Guid id)
+    {
+        var coupon = await _context.Coupons.FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
+        if (coupon == null) return ApiResponse<CouponDto>.Fail("Offer not found.");
+        return ApiResponse<CouponDto>.Ok(Map(coupon));
     }
 
     public async Task<ApiResponse<CouponDto>> CreateCouponAsync(CreateCouponDto dto)
     {
-        var coupon = new Domain.Entities.Coupon
-        {
-            Code = dto.Code.ToUpper(), Description = dto.Description,
-            DiscountPercentage = dto.DiscountPercentage,
-            MinimumOrderAmount = dto.MinimumOrderAmount,
-            ValidFrom = dto.ValidFrom, ValidTo = dto.ValidTo, UsageLimit = dto.UsageLimit
-        };
+        var code = dto.Code.Trim().ToUpperInvariant();
+        if (await _context.Coupons.AnyAsync(c => c.Code == code && !c.IsDeleted))
+            return ApiResponse<CouponDto>.Fail("An offer with this code already exists.");
+
+        var coupon = ApplyDto(new Domain.Entities.Coupon(), dto, code);
         _context.Coupons.Add(coupon);
         await _context.SaveChangesAsync();
-        return ApiResponse<CouponDto>.Ok(new CouponDto { Id = coupon.Id, Code = coupon.Code });
+        return ApiResponse<CouponDto>.Ok(Map(coupon), "Offer created.");
+    }
+
+    public async Task<ApiResponse<CouponDto>> UpdateCouponAsync(Guid id, CreateCouponDto dto)
+    {
+        var coupon = await _context.Coupons.FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
+        if (coupon == null) return ApiResponse<CouponDto>.Fail("Offer not found.");
+
+        var code = dto.Code.Trim().ToUpperInvariant();
+        if (await _context.Coupons.AnyAsync(c => c.Code == code && c.Id != id && !c.IsDeleted))
+            return ApiResponse<CouponDto>.Fail("An offer with this code already exists.");
+
+        ApplyDto(coupon, dto, code);
+        coupon.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        return ApiResponse<CouponDto>.Ok(Map(coupon), "Offer updated.");
+    }
+
+    public async Task<ApiResponse<bool>> ToggleActiveAsync(Guid id)
+    {
+        var coupon = await _context.Coupons.FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
+        if (coupon == null) return ApiResponse<bool>.Fail("Offer not found.");
+        coupon.IsActive = !coupon.IsActive;
+        coupon.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        return ApiResponse<bool>.Ok(coupon.IsActive, coupon.IsActive ? "Offer activated." : "Offer paused.");
+    }
+
+    public async Task<ApiResponse<bool>> DeleteCouponAsync(Guid id)
+    {
+        var coupon = await _context.Coupons.FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
+        if (coupon == null) return ApiResponse<bool>.Fail("Offer not found.");
+        coupon.IsDeleted = true;
+        coupon.IsActive = false;
+        coupon.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        return ApiResponse<bool>.Ok(true, "Offer deleted.");
+    }
+
+    public async Task<CouponDto?> GetActiveHomepageOfferAsync()
+    {
+        var now = DateTime.UtcNow;
+        var offer = await _context.Coupons
+            .Where(c => !c.IsDeleted && c.IsActive && c.ShowOnHomepage
+                && c.ValidFrom <= now && c.ValidTo >= now
+                && (!c.UsageLimit.HasValue || c.UsedCount < c.UsageLimit.Value))
+            .OrderByDescending(c => c.Priority)
+            .ThenByDescending(c => c.DiscountPercentage)
+            .FirstOrDefaultAsync();
+        return offer == null ? null : Map(offer);
+    }
+
+    private static Domain.Entities.Coupon ApplyDto(Domain.Entities.Coupon coupon, CreateCouponDto dto, string code)
+    {
+        coupon.Code = code;
+        coupon.Title = string.IsNullOrWhiteSpace(dto.Title) ? code : dto.Title.Trim();
+        coupon.Description = dto.Description?.Trim();
+        coupon.Subtitle = dto.Subtitle?.Trim();
+        coupon.BadgeText = dto.BadgeText?.Trim();
+        coupon.CtaText = dto.CtaText?.Trim();
+        coupon.DiscountPercentage = dto.DiscountPercentage;
+        coupon.MaxDiscountAmount = dto.MaxDiscountAmount;
+        coupon.MinimumOrderAmount = dto.MinimumOrderAmount;
+        coupon.ValidFrom = dto.ValidFrom.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(dto.ValidFrom, DateTimeKind.Utc) : dto.ValidFrom.ToUniversalTime();
+        coupon.ValidTo = dto.ValidTo.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(dto.ValidTo, DateTimeKind.Utc) : dto.ValidTo.ToUniversalTime();
+        coupon.UsageLimit = dto.UsageLimit;
+        coupon.ShowOnHomepage = dto.ShowOnHomepage;
+        coupon.FirstOrderOnly = dto.FirstOrderOnly;
+        coupon.IsActive = dto.IsActive;
+        coupon.Priority = dto.Priority;
+        return coupon;
+    }
+
+    private static CouponDto Map(Domain.Entities.Coupon c, decimal? calculatedDiscount = null)
+    {
+        var now = DateTime.UtcNow;
+        return new CouponDto
+        {
+            Id = c.Id,
+            Code = c.Code,
+            Title = c.Title ?? c.Code,
+            Description = c.Description,
+            Subtitle = c.Subtitle,
+            BadgeText = c.BadgeText,
+            CtaText = c.CtaText,
+            DiscountPercentage = c.DiscountPercentage,
+            MaxDiscountAmount = c.MaxDiscountAmount,
+            MinimumOrderAmount = c.MinimumOrderAmount,
+            ValidFrom = c.ValidFrom,
+            ValidTo = c.ValidTo,
+            UsageLimit = c.UsageLimit,
+            UsedCount = c.UsedCount,
+            IsActive = c.IsActive,
+            ShowOnHomepage = c.ShowOnHomepage,
+            FirstOrderOnly = c.FirstOrderOnly,
+            Priority = c.Priority,
+            CalculatedDiscount = calculatedDiscount,
+            IsCurrentlyValid = c.IsActive && !c.IsDeleted && c.ValidFrom <= now && c.ValidTo >= now
+                && (!c.UsageLimit.HasValue || c.UsedCount < c.UsageLimit.Value)
+        };
     }
 }
 
@@ -199,29 +320,39 @@ public class ReviewService : IReviewService
 
     public async Task<ApiResponse<ReviewDto>> CreateReviewAsync(Guid userId, CreateReviewDto dto)
     {
-        var user = await _context.Orders.Select(o => o.User).FirstOrDefaultAsync();
         var review = new Domain.Entities.Review
         {
-            UserId = userId, MenuItemId = dto.MenuItemId, OrderId = dto.OrderId,
-            Rating = dto.Rating, Comment = dto.Comment
+            UserId = userId,
+            MenuItemId = dto.MenuItemId,
+            OrderId = dto.OrderId,
+            Rating = Math.Clamp(dto.Rating, 1, 5),
+            Comment = dto.Comment
         };
         _context.Reviews.Add(review);
 
         var item = await _context.MenuItems.FindAsync(dto.MenuItemId);
         if (item != null)
         {
-            var reviews = await _context.Reviews.Where(r => r.MenuItemId == dto.MenuItemId).ToListAsync();
+            var reviews = await _context.Reviews.Where(r => r.MenuItemId == dto.MenuItemId && !r.IsDeleted).ToListAsync();
             reviews.Add(review);
             item.AverageRating = (decimal)reviews.Average(r => r.Rating);
             item.ReviewCount = reviews.Count;
+            item.UpdatedAt = DateTime.UtcNow;
         }
         await _context.SaveChangesAsync();
 
-        var reviewer = await _context.Orders.Where(o => o.UserId == userId).Select(o => o.User.FullName).FirstOrDefaultAsync();
+        var reviewer = await _context.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.FullName)
+            .FirstOrDefaultAsync();
+
         return ApiResponse<ReviewDto>.Ok(new ReviewDto
         {
-            Id = review.Id, Rating = review.Rating, Comment = review.Comment,
-            UserName = reviewer ?? "Customer", CreatedAt = review.CreatedAt
+            Id = review.Id,
+            Rating = review.Rating,
+            Comment = review.Comment,
+            UserName = reviewer ?? "Customer",
+            CreatedAt = review.CreatedAt
         });
     }
 

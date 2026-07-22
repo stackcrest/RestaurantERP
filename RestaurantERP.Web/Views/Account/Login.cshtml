@@ -91,7 +91,7 @@
                         <label class="form-label fw-medium">Email Address</label>
                         <div class="input-group input-group-lg">
                             <span class="input-group-text bg-white"><i class="bi bi-envelope text-muted"></i></span>
-                            <input asp-for="Email" class="form-control border-start-0 ps-0" placeholder="you@example.com" />
+                            <input asp-for="Email" class="form-control border-start-0 ps-0" placeholder="@AppContent.Get("placeholder.email", "you@example.com")" />
                         </div>
                         <span asp-validation-for="Email" class="text-danger small"></span>
                     </div>
@@ -99,11 +99,11 @@
                     <div class="mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label class="form-label fw-medium mb-0">Password</label>
-                            <a href="#" class="small text-decoration-none">Forgot password?</a>
+                            <a href="/Account/ForgotPassword" class="small text-decoration-none">Forgot password?</a>
                         </div>
                         <div class="input-group input-group-lg">
                             <span class="input-group-text bg-white"><i class="bi bi-lock text-muted"></i></span>
-                            <input asp-for="Password" class="form-control border-start-0 border-end-0 ps-0" placeholder="••••••••" />
+                            <input asp-for="Password" class="form-control border-start-0 border-end-0 ps-0" placeholder="@AppContent.Get("placeholder.password", "••••••••")" />
                             <button type="button" class="input-group-text bg-white border-start-0" onclick="togglePassword(this)">
                                 <i class="bi bi-eye text-muted"></i>
                             </button>
@@ -138,7 +138,9 @@
                 </form>
 
                 <p class="text-center text-muted mb-0">
-                    Don't have an account? <a href="/Account/Register" class="fw-semibold text-decoration-none">Create Account</a>
+                    Don't have an account?
+                    <a href="/Account/QuickJoin?returnUrl=@Uri.EscapeDataString(ViewBag.ReturnUrl as string ?? "/Menu")" class="fw-semibold text-decoration-none">Order with name &amp; phone</a>
+                    or <a href="/Account/Register?returnUrl=@Uri.EscapeDataString(ViewBag.ReturnUrl as string ?? "/Menu")" class="fw-semibold text-decoration-none">Create Account</a>
                 </p>
                 
                 <div class="text-center mt-5">

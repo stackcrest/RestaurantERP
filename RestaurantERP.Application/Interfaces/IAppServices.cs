@@ -107,9 +107,14 @@ public interface IReservationService
 
 public interface ICouponService
 {
-    Task<ApiResponse<CouponDto>> ValidateCouponAsync(string code, decimal orderAmount);
+    Task<ApiResponse<CouponDto>> ValidateCouponAsync(string code, decimal orderAmount, Guid? userId = null);
     Task<ApiResponse<List<CouponDto>>> GetCouponsAsync();
+    Task<ApiResponse<CouponDto>> GetByIdAsync(Guid id);
     Task<ApiResponse<CouponDto>> CreateCouponAsync(CreateCouponDto dto);
+    Task<ApiResponse<CouponDto>> UpdateCouponAsync(Guid id, CreateCouponDto dto);
+    Task<ApiResponse<bool>> ToggleActiveAsync(Guid id);
+    Task<ApiResponse<bool>> DeleteCouponAsync(Guid id);
+    Task<CouponDto?> GetActiveHomepageOfferAsync();
 }
 
 public interface IReviewService

@@ -1,10 +1,25 @@
 @model RestaurantERP.Domain.Entities.MenuItem
+@using RestaurantERP.Application.DTOs.Orders
 @{
     ViewData["Title"] = Model.Name;
+    var reviews = ViewBag.Reviews as List<ReviewDto> ?? new();
+    var isLiked = ViewBag.IsLiked as bool? ?? false;
+    var filledStars = (int)Math.Round(Model.AverageRating);
+    if (filledStars < 0) filledStars = 0;
+    if (filledStars > 5) filledStars = 5;
 }
 
 <section class="py-5">
     <div class="container">
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success">@TempData["Success"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger">@TempData["Error"]</div>
+        }
+
         <nav aria-label="breadcrumb" class="mb-4">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Home</a></li>
@@ -33,17 +48,42 @@
                 
                 <h1 class="fw-bold mb-3">@Model.Name</h1>
                 
-                <div class="d-flex align-items-center gap-4 mb-4">
+                <div class="d-flex align-items-center gap-4 mb-4 flex-wrap">
                     <span class="h3 fw-bold text-primary mb-0">₹@Model.BasePrice</span>
                     <span class="text-warning">
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-fill"></i>
-                        <i class="bi bi-star-half"></i>
+                        @for (var i = 1; i <= 5; i++)
+                        {
+                            <i class="bi @(i <= filledStars ? "bi-star-fill" : "bi-star")"></i>
+                        }
                         <span class="text-dark ms-1">@Model.AverageRating.ToString("N1")</span>
                         <span class="text-muted">(@Model.ReviewCount reviews)</span>
                     </span>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <form asp-action="ToggleLike" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="menuItemId" value="@Model.Id" />
+                            <button type="submit" class="btn @(isLiked ? "btn-danger" : "btn-outline-danger")">
+                                <i class="bi @(isLiked ? "bi-heart-fill" : "bi-heart") me-1"></i>
+                                @(isLiked ? "Liked" : "Like")
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <a href="/Account/Login?returnUrl=/Menu/Details/@Model.Id" class="btn btn-outline-danger">
+                            <i class="bi bi-heart me-1"></i>Like
+                        </a>
+                    }
+                    <button type="button" class="btn btn-outline-secondary" onclick="shareMenuItem()">
+                        <i class="bi bi-share me-1"></i>Share
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="copyMenuLink()">
+                        <i class="bi bi-link-45deg me-1"></i>Copy link
+                    </button>
                 </div>
                 
                 <p class="text-muted mb-4">@Model.Description</p>
@@ -134,12 +174,84 @@
                 {
                     <div class="alert alert-light border">
                         <i class="bi bi-info-circle me-2"></i>
-                        <a href="/Account/Login" class="fw-bold text-primary">Login</a> or 
-                        <a href="/Account/Register" class="fw-bold text-primary">Sign up</a> to order this item
+                        <a href="/Account/QuickJoin?returnUrl=/Menu/Details/@Model.Id" class="fw-bold text-primary">Continue with name &amp; phone</a>
+                        or <a href="/Account/Login?returnUrl=/Menu/Details/@Model.Id" class="fw-bold text-primary">Login</a> to order
                     </div>
-                    <a href="/Account/Login" class="btn btn-primary btn-lg w-100">
-                        <i class="bi bi-box-arrow-in-right me-2"></i>Login to Order
+                    <a href="/Account/QuickJoin?returnUrl=/Menu/Details/@Model.Id" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-lightning-charge me-2"></i>Continue to order
                     </a>
+                }
+            </div>
+        </div>
+
+        <hr class="my-5" />
+
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <h4 class="fw-bold mb-3">Write a Review</h4>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <form asp-action="AddReview" method="post" class="card border-0 shadow-sm">
+                        @Html.AntiForgeryToken()
+                        <div class="card-body">
+                            <input type="hidden" name="menuItemId" value="@Model.Id" />
+                            <div class="mb-3">
+                                <label class="form-label">Rating</label>
+                                <select name="rating" class="form-select" required>
+                                    <option value="5">5 - Excellent</option>
+                                    <option value="4">4 - Good</option>
+                                    <option value="3">3 - Average</option>
+                                    <option value="2">2 - Poor</option>
+                                    <option value="1">1 - Bad</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Comment</label>
+                                <textarea name="comment" class="form-control" rows="3"
+                                          placeholder="@AppContent.Get("placeholder.review_comment", "Share your experience...")"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-chat-dots me-1"></i>Submit Review
+                            </button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <div class="alert alert-light border">
+                        <a href="/Account/Login?returnUrl=/Menu/Details/@Model.Id">Login</a> to leave a review.
+                    </div>
+                }
+            </div>
+            <div class="col-lg-7">
+                <h4 class="fw-bold mb-3">Customer Reviews</h4>
+                @if (!reviews.Any())
+                {
+                    <p class="text-muted">No reviews yet. Be the first to review this dish.</p>
+                }
+                else
+                {
+                    @foreach (var review in reviews)
+                    {
+                        <div class="border rounded-3 p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <strong>@review.UserName</strong>
+                                    <div class="text-warning small">
+                                        @for (var i = 1; i <= 5; i++)
+                                        {
+                                            <i class="bi @(i <= review.Rating ? "bi-star-fill" : "bi-star")"></i>
+                                        }
+                                    </div>
+                                </div>
+                                <small class="text-muted">@review.CreatedAt.ToLocalTime().ToString("dd MMM yyyy")</small>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(review.Comment))
+                            {
+                                <p class="mb-0 text-muted">@review.Comment</p>
+                            }
+                        </div>
+                    }
                 }
             </div>
         </div>
@@ -164,5 +276,27 @@
             this.closest('label').classList.add('btn-primary');
         });
     });
+
+    async function shareMenuItem() {
+        const data = {
+            title: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Name)),
+            text: @Html.Raw(System.Text.Json.JsonSerializer.Serialize($"Try {Model.Name} at our restaurant")),
+            url: window.location.href
+        };
+        if (navigator.share) {
+            try { await navigator.share(data); } catch (_) {}
+        } else {
+            await copyMenuLink();
+        }
+    }
+
+    async function copyMenuLink() {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            alert('Link copied!');
+        } catch (_) {
+            prompt('Copy this link:', window.location.href);
+        }
+    }
 </script>
 }

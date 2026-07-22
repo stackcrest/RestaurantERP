@@ -1,0 +1,102 @@
+@model List<RestaurantERP.Application.DTOs.Orders.CouponDto>
+@{
+    ViewData["Title"] = "Offers";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h5 class="fw-bold mb-1">Offer Management</h5>
+        <p class="text-muted small mb-0">Create and run promotions shown on the homepage and used at checkout</p>
+    </div>
+    <a href="/Admin/Offers/Create" class="btn btn-primary"><i class="bi bi-plus me-1"></i> New Offer</a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="card">
+    <div class="card-body p-0">
+        @if (!Model.Any())
+        {
+            <div class="p-5 text-center text-muted">
+                <i class="bi bi-percent display-5 d-block mb-3"></i>
+                No offers yet. Create one like “Sign up &amp; get 10% off first order”.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Offer</th>
+                            <th>Code</th>
+                            <th>Discount</th>
+                            <th>Validity</th>
+                            <th>Flags</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var offer in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@(offer.Title ?? offer.Code)</div>
+                                    <div class="small text-muted text-truncate" style="max-width: 280px;">@(offer.Subtitle ?? offer.Description)</div>
+                                </td>
+                                <td><code>@offer.Code</code></td>
+                                <td>
+                                    @offer.DiscountPercentage%
+                                    @if (offer.MaxDiscountAmount.HasValue)
+                                    {
+                                        <div class="small text-muted">max ₹@offer.MaxDiscountAmount.Value.ToString("N0")</div>
+                                    }
+                                </td>
+                                <td class="small">
+                                    @offer.ValidFrom.ToLocalTime().ToString("dd MMM yyyy")
+                                    – @offer.ValidTo.ToLocalTime().ToString("dd MMM yyyy")
+                                    <div class="text-muted">Used @offer.UsedCount@(offer.UsageLimit.HasValue ? $" / {offer.UsageLimit}" : "")</div>
+                                </td>
+                                <td>
+                                    @if (offer.ShowOnHomepage)
+                                    {
+                                        <span class="badge bg-info text-dark">Homepage</span>
+                                    }
+                                    @if (offer.FirstOrderOnly)
+                                    {
+                                        <span class="badge bg-warning text-dark">1st order</span>
+                                    }
+                                </td>
+                                <td>
+                                    <form asp-action="Toggle" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@offer.Id" />
+                                        <button type="submit" class="btn btn-sm @(offer.IsActive && offer.IsCurrentlyValid ? "btn-success" : offer.IsActive ? "btn-secondary" : "btn-outline-secondary")">
+                                            @(offer.IsActive ? (offer.IsCurrentlyValid ? "Running" : "Scheduled") : "Paused")
+                                        </button>
+                                    </form>
+                                </td>
+                                <td class="text-end">
+                                    <a href="/Admin/Offers/Edit/@offer.Id" class="btn btn-sm btn-outline-primary">Edit</a>
+                                    <form asp-action="Delete" method="post" class="d-inline" onsubmit="return confirm('Delete this offer?')">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@offer.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

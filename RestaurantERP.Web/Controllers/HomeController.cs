@@ -43,6 +43,7 @@ public partial class HomeController : BaseController
         ViewBag.Theme = theme;
         ViewBag.CartQuantities = await GetCartQuantitiesAsync();
         ViewBag.ItemsWithOptions = await GetMenuItemsWithOptionsAsync();
+        // ActiveOffer is also loaded by SiteDataFilter for layout; ensure available on home
         return View();
     }
 

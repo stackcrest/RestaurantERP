@@ -6,6 +6,7 @@
     var hasOptions = itemsWithOptions.Contains(Model.Id);
     var isAuthenticated = User.Identity?.IsAuthenticated == true;
     var canPlaceOrders = ViewBag.CanPlaceOrders as bool? ?? true;
+    var returnUrl = $"/Menu";
 }
 
 <div class="col-sm-6 col-xl-4">
@@ -41,7 +42,7 @@
             }
             else if (!isAuthenticated)
             {
-                <a href="/Account/Login" class="btn btn-sm blinkit-add-btn">ADD</a>
+                <a href="/Account/QuickJoin?returnUrl=@Uri.EscapeDataString(returnUrl)" class="btn btn-sm blinkit-add-btn">ADD</a>
             }
             else if (!canPlaceOrders)
             {
@@ -49,7 +50,7 @@
             }
             else if (hasOptions)
             {
-                <a href="/Menu/Details/@Model.Id" class="btn btn-sm blinkit-add-btn">ADD</a>
+                <button type="button" class="btn btn-sm blinkit-add-btn" data-item-id="@Model.Id" data-has-options="true">ADD</button>
             }
             else if (qty > 0)
             {
