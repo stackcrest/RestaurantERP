@@ -1,6 +1,7 @@
 // POS Terminal - offline bill generation
 const posCart = [];
 const CGST = 2.5, SGST = 2.5, DISCOUNT_THRESHOLD = 500, DISCOUNT_PCT = 5, DELIVERY_FEE = 40;
+let posSizeModal;
 
 function posNotify(msg, type, opts) {
     if (window.RestaurantNotify) window.RestaurantNotify.show(msg, type, opts);
@@ -16,7 +17,7 @@ function renderCart() {
     list.innerHTML = posCart.map((item, idx) => `
         <div class="pos-cart-row d-flex justify-content-between align-items-center">
             <div class="small flex-grow-1">
-                <div class="fw-semibold">${item.name}</div>
+                <div class="fw-semibold">${item.name}${item.variantName ? ` <span class="text-muted">(${item.variantName})</span>` : ''}</div>
                 <div class="text-muted">₹${item.price} each</div>
             </div>
             <div class="d-flex align-items-center gap-1">
@@ -51,16 +52,68 @@ window.changeQty = (idx, delta) => {
 };
 window.removeItem = (idx) => { posCart.splice(idx, 1); renderCart(); };
 
+function addPosLine(menuItemId, name, price, variantId, variantName) {
+    const existing = posCart.find(i =>
+        i.menuItemId === menuItemId
+        && (i.variantId || null) === (variantId || null));
+    if (existing) existing.qty++;
+    else {
+        posCart.push({
+            menuItemId,
+            name,
+            price,
+            qty: 1,
+            variantId: variantId || null,
+            variantName: variantName || null
+        });
+    }
+    renderCart();
+    posNotify(`${name}${variantName ? ` (${variantName})` : ''} added to bill`, 'success', { title: 'POS', duration: 2000 });
+}
+
+function openSizePicker(el) {
+    let variants = [];
+    try { variants = JSON.parse(el.dataset.variants || '[]'); } catch { variants = []; }
+    if (!variants.length) {
+        addPosLine(el.dataset.id, el.dataset.nameDisplay, parseFloat(el.dataset.price), null, null);
+        return;
+    }
+
+    const title = document.getElementById('posSizeTitle');
+    const body = document.getElementById('posSizeBody');
+    const isHalfFull = variants.some(v => /^half$/i.test(v.name)) && variants.some(v => /^full$/i.test(v.name));
+    title.textContent = isHalfFull ? `${el.dataset.nameDisplay} — Half or Full` : `${el.dataset.nameDisplay} — Choose size`;
+    body.innerHTML = variants.map(v => `
+        <button type="button" class="btn btn-outline-primary w-100 mb-2 py-3 d-flex justify-content-between align-items-center pos-size-choice"
+                data-variant-id="${v.id}" data-variant-name="${v.name}" data-price="${v.price}">
+            <span class="fw-semibold">${v.name}</span>
+            <span>₹${Math.round(v.price)}</span>
+        </button>`).join('');
+
+    body.querySelectorAll('.pos-size-choice').forEach(btn => {
+        btn.addEventListener('click', () => {
+            addPosLine(
+                el.dataset.id,
+                el.dataset.nameDisplay,
+                parseFloat(btn.dataset.price),
+                btn.dataset.variantId,
+                btn.dataset.variantName
+            );
+            posSizeModal?.hide();
+        });
+    });
+    posSizeModal?.show();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    const modalEl = document.getElementById('posSizeModal');
+    if (modalEl && window.bootstrap) posSizeModal = new bootstrap.Modal(modalEl);
+
     document.querySelectorAll('.pos-add-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const el = btn.closest('.pos-item');
-            const id = el.dataset.id;
-            const existing = posCart.find(i => i.menuItemId === id);
-            if (existing) existing.qty++;
-            else posCart.push({ menuItemId: id, name: el.dataset.nameDisplay, price: parseFloat(el.dataset.price), qty: 1 });
-            renderCart();
-            posNotify(`${el.dataset.nameDisplay} added to bill`, 'success', { title: 'POS', duration: 2000 });
+            if (el.dataset.hasSizes === '1') openSizePicker(el);
+            else addPosLine(el.dataset.id, el.dataset.nameDisplay, parseFloat(el.dataset.price), null, null);
         });
     });
 
@@ -113,7 +166,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 customerName: document.getElementById('customerName').value || null,
                 customerPhone: document.getElementById('customerPhone').value || null,
                 paymentMethod: document.querySelector('input[name="payment"]:checked')?.value || 'Cash',
-                items: posCart.map(i => ({ menuItemId: i.menuItemId, quantity: i.qty }))
+                items: posCart.map(i => ({
+                    menuItemId: i.menuItemId,
+                    variantId: i.variantId || null,
+                    quantity: i.qty
+                }))
             };
 
             const res = await fetch('/Admin/Pos/Checkout', {

@@ -29,6 +29,7 @@ public partial class HomeController : BaseController
 
         var featured = await _context.MenuItems
             .Include(m => m.Category)
+            .Include(m => m.Variants.Where(v => v.IsActive))
             .Where(m => m.IsFeatured && m.IsAvailable)
             .Take(8)
             .ToListAsync();

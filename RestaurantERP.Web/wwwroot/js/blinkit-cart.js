@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let optionsSheet;
-    let optionsState = { itemId: null, basePrice: 0 };
+    let optionsState = { itemId: null, basePrice: 0, imageUrl: null };
 
     function getOptionsSheet() {
         if (!optionsSheet) {
@@ -87,40 +87,71 @@ document.addEventListener('DOMContentLoaded', () => {
         return optionsSheet;
     }
 
+    function moneyInr(n) {
+        return '₹' + Math.round(n || 0).toLocaleString('en-IN');
+    }
+
+    function getSheetQty() {
+        return Math.max(1, parseInt(document.getElementById('sheetQty')?.value || '1', 10));
+    }
+
+    function setSheetQty(n) {
+        const qty = Math.min(20, Math.max(1, n));
+        const hidden = document.getElementById('sheetQty');
+        const label = document.getElementById('sheetQtyValue');
+        if (hidden) hidden.value = String(qty);
+        if (label) label.textContent = String(qty);
+        refreshOptionsPrice();
+    }
+
     function calcOptionsTotal() {
-        let total = optionsState.basePrice;
+        let unit = optionsState.basePrice;
         const variant = document.querySelector('#menuOptionsBody input[name="sheetVariant"]:checked');
-        if (variant) total += parseFloat(variant.dataset.adj || '0');
+        if (variant) {
+            if (variant.dataset.price) unit = parseFloat(variant.dataset.price);
+            else unit = optionsState.basePrice + parseFloat(variant.dataset.adj || '0');
+        }
         document.querySelectorAll('#menuOptionsBody input[name="sheetAddOn"]:checked').forEach((cb) => {
-            total += parseFloat(cb.dataset.price || '0');
+            unit += parseFloat(cb.dataset.price || '0');
         });
-        const qty = parseInt(document.getElementById('sheetQty')?.value || '1', 10);
-        return total * (qty > 0 ? qty : 1);
+        return unit * getSheetQty();
     }
 
     function refreshOptionsPrice() {
         const priceEl = document.getElementById('menuOptionsPrice');
         const btn = document.getElementById('menuOptionsAddBtn');
         const total = calcOptionsTotal();
-        if (priceEl) priceEl.textContent = '₹' + Math.round(total).toLocaleString('en-IN');
+        if (priceEl && !priceEl.dataset.locked) priceEl.textContent = '';
         if (btn) {
             btn.disabled = false;
-            btn.textContent = 'Add to cart · ₹' + Math.round(total).toLocaleString('en-IN');
+            btn.textContent = 'Add item — ' + moneyInr(total);
         }
+    }
+
+    function sizeSubtitle(name) {
+        const n = (name || '').toLowerCase();
+        if (n === 'half') return 'Serves 1–2';
+        if (n === 'full') return 'Serves 2–3';
+        return '';
     }
 
     async function openOptionsSheet(itemId) {
         const sheet = getOptionsSheet();
         const body = document.getElementById('menuOptionsBody');
         const title = document.getElementById('menuOptionsTitle');
+        const thumb = document.getElementById('menuOptionsThumb');
         const btn = document.getElementById('menuOptionsAddBtn');
         if (!body) {
             window.location.href = '/Menu/Details/' + itemId;
             return;
         }
 
-        body.innerHTML = '<div class="text-center py-4 text-muted">Loading…</div>';
-        if (btn) btn.disabled = true;
+        body.innerHTML = '<div class="text-center py-4 text-secondary">Loading…</div>';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Add item';
+        }
+        setSheetQty(1);
         sheet?.show();
 
         try {
@@ -132,56 +163,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            optionsState = { itemId: data.id, basePrice: data.basePrice };
+            optionsState = { itemId: data.id, basePrice: data.basePrice, imageUrl: data.imageUrl || null };
             if (title) title.textContent = data.name;
+            if (thumb) {
+                if (data.imageUrl) {
+                    thumb.src = data.imageUrl;
+                    thumb.alt = data.name || '';
+                    thumb.classList.remove('d-none');
+                } else {
+                    thumb.classList.add('d-none');
+                    thumb.removeAttribute('src');
+                }
+            }
+
+            const isHalfFull = Array.isArray(data.variants) && data.variants.length >= 2
+                && data.variants.some(v => /^half$/i.test(v.name))
+                && data.variants.some(v => /^full$/i.test(v.name));
 
             let html = '';
             if (data.variants?.length) {
-                html += '<div class="mb-3"><h6 class="fw-bold mb-2">Choose size</h6><div class="d-flex flex-column gap-2">';
+                html += `<div class="menu-customizer-section">
+                    <h6>${isHalfFull ? 'Quantity' : 'Choose size'}</h6>
+                    <div class="menu-customizer-hint">Required · Select any 1 option</div>`;
                 data.variants.forEach((v, i) => {
                     const checked = v.isDefault || i === 0 ? 'checked' : '';
-                    html += `<label class="option-chip d-flex justify-content-between align-items-center">
-                        <span><input type="radio" name="sheetVariant" value="${v.id}" data-adj="${v.priceAdjustment}" ${checked}> ${v.name}</span>
-                        <span class="text-muted">${v.priceAdjustment >= 0 ? '+' : ''}₹${Math.round(v.priceAdjustment)}</span>
+                    const absolute = typeof v.price === 'number' ? v.price : (data.basePrice + (v.priceAdjustment || 0));
+                    const sub = sizeSubtitle(v.name);
+                    html += `<label class="menu-customizer-row">
+                        <span>
+                            <span class="row-label d-block">${v.name}</span>
+                            ${sub ? `<span class="row-sub">${sub}</span>` : ''}
+                        </span>
+                        <span class="d-flex align-items-center">
+                            <span class="row-price">${moneyInr(absolute)}</span>
+                            <input type="radio" name="sheetVariant" value="${v.id}" data-adj="${v.priceAdjustment || 0}" data-price="${absolute}" ${checked}>
+                        </span>
                     </label>`;
                 });
-                html += '</div></div>';
+                html += '</div>';
             }
 
             if (data.addOns?.length) {
-                html += '<div class="mb-3"><h6 class="fw-bold mb-2">Add extras</h6><div class="d-flex flex-column gap-2">';
+                html += `<div class="menu-customizer-section">
+                    <h6>Add accompaniments</h6>
+                    <div class="menu-customizer-hint">Optional · Select extras</div>`;
                 data.addOns.forEach((a) => {
-                    html += `<label class="option-chip d-flex justify-content-between align-items-center">
-                        <span><input type="checkbox" name="sheetAddOn" value="${a.id}" data-price="${a.price}"> ${a.name}</span>
-                        <span class="text-muted">+₹${Math.round(a.price)}</span>
+                    html += `<label class="menu-customizer-row">
+                        <span class="row-label">${a.name}</span>
+                        <span class="d-flex align-items-center">
+                            <span class="row-price">+${moneyInr(a.price)}</span>
+                            <input type="checkbox" name="sheetAddOn" value="${a.id}" data-price="${a.price}">
+                        </span>
                     </label>`;
                 });
-                html += '</div></div>';
+                html += '</div>';
             }
 
-            html += `<div class="d-flex align-items-center justify-content-between mb-2">
-                <span class="fw-bold">Quantity</span>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-outline-secondary" id="sheetQtyMinus" style="width:44px;height:44px;">−</button>
-                    <input type="number" id="sheetQty" value="1" min="1" max="20" class="form-control text-center fw-bold" style="width:64px;height:44px;" readonly>
-                    <button type="button" class="btn btn-primary" id="sheetQtyPlus" style="width:44px;height:44px;">+</button>
-                </div>
-            </div>`;
+            if (!data.variants?.length && !data.addOns?.length) {
+                html = '<div class="text-center text-secondary py-3">No options for this item.</div>';
+            }
 
             body.innerHTML = html;
             body.querySelectorAll('input').forEach((el) => el.addEventListener('change', refreshOptionsPrice));
-            document.getElementById('sheetQtyMinus')?.addEventListener('click', () => {
-                const input = document.getElementById('sheetQty');
-                const n = Math.max(1, parseInt(input.value, 10) - 1);
-                input.value = n;
-                refreshOptionsPrice();
-            });
-            document.getElementById('sheetQtyPlus')?.addEventListener('click', () => {
-                const input = document.getElementById('sheetQty');
-                const n = Math.min(20, parseInt(input.value, 10) + 1);
-                input.value = n;
-                refreshOptionsPrice();
-            });
             refreshOptionsPrice();
         } catch {
             notify('Could not load options. Opening full page…', 'warning');
@@ -192,9 +235,14 @@ document.addEventListener('DOMContentLoaded', () => {
     async function submitOptionsSheet() {
         if (!optionsState.itemId) return;
         const variant = document.querySelector('#menuOptionsBody input[name="sheetVariant"]:checked');
+        const variantsExist = document.querySelectorAll('#menuOptionsBody input[name="sheetVariant"]').length > 0;
+        if (variantsExist && !variant) {
+            notify('Please select Half or Full', 'warning');
+            return;
+        }
         const addOnIds = Array.from(document.querySelectorAll('#menuOptionsBody input[name="sheetAddOn"]:checked'))
             .map((cb) => cb.value);
-        const quantity = parseInt(document.getElementById('sheetQty')?.value || '1', 10);
+        const quantity = getSheetQty();
 
         try {
             const res = await fetch('/Cart/QuickAddConfigured', {
@@ -225,6 +273,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.getElementById('menuOptionsAddBtn')?.addEventListener('click', submitOptionsSheet);
+    document.getElementById('sheetQtyMinus')?.addEventListener('click', () => setSheetQty(getSheetQty() - 1));
+    document.getElementById('sheetQtyPlus')?.addEventListener('click', () => setSheetQty(getSheetQty() + 1));
 
     async function quickAdd(itemId, button) {
         if (button?.dataset.hasOptions === 'true') {

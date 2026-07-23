@@ -156,6 +156,117 @@
         }
         .option-chip input { display: none; }
 
+        /* Zomato-style Half/Full customizer sheet */
+        #menuOptionsSheet.menu-customizer {
+            height: auto;
+            max-height: 88vh;
+            background: #1a1a1a;
+            color: #f5f5f5;
+            border-radius: 20px 20px 0 0;
+        }
+        #menuOptionsSheet.menu-customizer .offcanvas-header {
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 1rem 1.15rem;
+        }
+        #menuOptionsSheet.menu-customizer .btn-close {
+            filter: invert(1) grayscale(100%);
+            opacity: 0.85;
+        }
+        .menu-customizer-thumb {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #333;
+            flex-shrink: 0;
+        }
+        .menu-customizer-body {
+            padding: 0.75rem 1.15rem 1rem;
+            overflow-y: auto;
+            max-height: calc(88vh - 160px);
+        }
+        .menu-customizer-section {
+            background: #242424;
+            border-radius: 14px;
+            padding: 1rem;
+            margin-bottom: 0.85rem;
+        }
+        .menu-customizer-section h6 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-bottom: 0.15rem;
+            color: #fff;
+            text-transform: none;
+        }
+        .menu-customizer-hint {
+            font-size: 0.75rem;
+            color: #9a9a9a;
+            margin-bottom: 0.85rem;
+        }
+        .menu-customizer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.7rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            cursor: pointer;
+            margin: 0;
+        }
+        .menu-customizer-row:last-child { border-bottom: 0; padding-bottom: 0; }
+        .menu-customizer-row:first-of-type { padding-top: 0; }
+        .menu-customizer-row .row-label { font-size: 0.95rem; color: #eee; }
+        .menu-customizer-row .row-sub { font-size: 0.75rem; color: #8e8e8e; }
+        .menu-customizer-row .row-price { font-size: 0.95rem; color: #ddd; margin-right: 0.65rem; white-space: nowrap; }
+        .menu-customizer-row input[type="radio"],
+        .menu-customizer-row input[type="checkbox"] {
+            width: 1.15rem;
+            height: 1.15rem;
+            accent-color: var(--primary);
+            flex-shrink: 0;
+        }
+        .menu-customizer-footer {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.85rem 1.15rem;
+            padding-bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
+            border-top: 1px solid rgba(255,255,255,0.08);
+            background: #141414;
+        }
+        .menu-customizer-qty {
+            display: flex;
+            align-items: center;
+            background: #2a2a2a;
+            border-radius: 10px;
+            overflow: hidden;
+            min-height: 48px;
+        }
+        .menu-customizer-qty button {
+            background: transparent;
+            border: 0;
+            color: #fff;
+            width: 42px;
+            height: 48px;
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        .menu-customizer-qty .qty-val {
+            min-width: 28px;
+            text-align: center;
+            font-weight: 700;
+            color: #fff;
+        }
+        .menu-customizer-add {
+            flex: 1;
+            background: var(--primary) !important;
+            border: none !important;
+            border-radius: 12px !important;
+            min-height: 48px;
+            font-weight: 700 !important;
+            font-size: 1rem !important;
+        }
+
         /* Responsive */
         @@media (max-width: 768px) {
             .hero h1 { font-size: 2rem; }
@@ -394,21 +505,30 @@
         }
     }
 
-    <!-- Mobile add-ons / variants bottom sheet -->
-    <div class="offcanvas offcanvas-bottom rounded-top-4" tabindex="-1" id="menuOptionsSheet" style="height: auto; max-height: 85vh;">
-        <div class="offcanvas-header border-bottom">
-            <div>
-                <h5 class="offcanvas-title fw-bold mb-0" id="menuOptionsTitle">Customize</h5>
-                <small class="text-muted" id="menuOptionsPrice"></small>
+    <!-- Customize sheet: Half/Full + add-ons (Zomato-style) -->
+    <div class="offcanvas offcanvas-bottom menu-customizer" tabindex="-1" id="menuOptionsSheet" aria-labelledby="menuOptionsTitle">
+        <div class="offcanvas-header">
+            <div class="d-flex align-items-center gap-3 flex-grow-1 pe-2">
+                <img src="" alt="" class="menu-customizer-thumb d-none" id="menuOptionsThumb" />
+                <div class="min-w-0">
+                    <h5 class="offcanvas-title fw-bold mb-0 text-truncate" id="menuOptionsTitle">Customize</h5>
+                    <small class="text-secondary" id="menuOptionsPrice"></small>
+                </div>
             </div>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
-        <div class="offcanvas-body" id="menuOptionsBody">
-            <div class="text-center py-4 text-muted">Loading…</div>
+        <div class="menu-customizer-body" id="menuOptionsBody">
+            <div class="text-center py-4 text-secondary">Loading…</div>
         </div>
-        <div class="p-3 border-top">
-            <button type="button" class="btn btn-primary w-100 py-3 fw-semibold" id="menuOptionsAddBtn" disabled>
-                Add to cart
+        <div class="menu-customizer-footer">
+            <div class="menu-customizer-qty">
+                <button type="button" id="sheetQtyMinus" aria-label="Decrease">−</button>
+                <span class="qty-val" id="sheetQtyValue">1</span>
+                <button type="button" id="sheetQtyPlus" aria-label="Increase">+</button>
+            </div>
+            <input type="hidden" id="sheetQty" value="1" />
+            <button type="button" class="btn btn-primary menu-customizer-add" id="menuOptionsAddBtn" disabled>
+                Add item
             </button>
         </div>
     </div>

@@ -37,6 +37,7 @@ public class MenuController : BaseController
 
         var query = _context.MenuItems
             .Include(m => m.Category)
+            .Include(m => m.Variants.Where(v => v.IsActive))
             .Where(m => m.IsAvailable && !m.IsDeleted)
             .AsQueryable();
 
@@ -121,6 +122,7 @@ public class MenuController : BaseController
                 id = v.Id,
                 name = v.Name,
                 priceAdjustment = v.PriceAdjustment,
+                price = item.BasePrice + v.PriceAdjustment,
                 isDefault = v.IsDefault
             }),
             addOns = item.MenuItemAddOns

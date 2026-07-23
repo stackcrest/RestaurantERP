@@ -7,6 +7,12 @@
     var isAuthenticated = User.Identity?.IsAuthenticated == true;
     var canPlaceOrders = ViewBag.CanPlaceOrders as bool? ?? true;
     var returnUrl = $"/Menu";
+    var activeVariants = Model.Variants?.Where(v => v.IsActive).OrderBy(v => v.PriceAdjustment).ToList() ?? new();
+    var hasHalfFull = activeVariants.Any(v => v.Name.Equals("Half", StringComparison.OrdinalIgnoreCase))
+        && activeVariants.Any(v => v.Name.Equals("Full", StringComparison.OrdinalIgnoreCase));
+    var fromPrice = activeVariants.Any()
+        ? Model.BasePrice + activeVariants.Min(v => v.PriceAdjustment)
+        : Model.BasePrice;
 }
 
 <div class="col-sm-6 col-xl-4">
@@ -20,6 +26,10 @@
                     <div class="position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex align-items-center justify-content-center">
                         <span class="badge bg-danger">Unavailable</span>
                     </div>
+                }
+                else if (hasHalfFull)
+                {
+                    <span class="badge bg-dark position-absolute top-0 start-0 m-2">Half · Full</span>
                 }
             </div>
             <div class="card-body pb-5">
@@ -67,7 +77,14 @@
         </div>
 
         <div class="position-absolute bottom-0 start-0 m-3">
-            <span class="fw-bold text-primary">₹@Model.BasePrice</span>
+            @if (hasHalfFull)
+            {
+                <span class="fw-bold text-primary">From ₹@fromPrice.ToString("0")</span>
+            }
+            else
+            {
+                <span class="fw-bold text-primary">₹@Model.BasePrice</span>
+            }
         </div>
     </div>
 </div>
