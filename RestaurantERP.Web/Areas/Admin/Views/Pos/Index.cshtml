@@ -35,10 +35,39 @@ else
                     <div class="row g-2" id="posItemsGrid">
                         @foreach (var item in items)
                         {
-                            <div class="col-6 col-md-4 col-xl-3 pos-item" data-category="@item.CategoryId" data-name="@item.Name.ToLower()" data-id="@item.Id" data-price="@item.BasePrice" data-name-display="@item.Name">
+                            var variantsJson = System.Text.Json.JsonSerializer.Serialize(
+                                item.Variants.Where(v => v.IsActive)
+                                    .OrderByDescending(v => v.IsDefault)
+                                    .ThenBy(v => v.Name)
+                                    .Select(v => new
+                                    {
+                                        id = v.Id,
+                                        name = v.Name,
+                                        price = item.BasePrice + v.PriceAdjustment
+                                    }));
+                            var hasSizes = item.Variants.Any(v => v.IsActive);
+                            var fromPrice = hasSizes
+                                ? item.BasePrice + item.Variants.Where(v => v.IsActive).Min(v => v.PriceAdjustment)
+                                : item.BasePrice;
+                            <div class="col-6 col-md-4 col-xl-3 pos-item"
+                                 data-category="@item.CategoryId"
+                                 data-name="@item.Name.ToLower()"
+                                 data-id="@item.Id"
+                                 data-price="@item.BasePrice"
+                                 data-name-display="@item.Name"
+                                 data-has-sizes="@(hasSizes ? "1" : "0")"
+                                 data-variants='@Html.Raw(variantsJson)'>
                                 <button type="button" class="btn btn-light border w-100 text-start p-2 pos-add-btn h-100">
                                     <div class="fw-semibold small text-truncate">@item.Name</div>
-                                    <div class="text-primary fw-bold">₹@item.BasePrice</div>
+                                    @if (hasSizes)
+                                    {
+                                        <div class="text-primary fw-bold">From ₹@fromPrice.ToString("0")</div>
+                                        <div class="small text-muted">Half · Full</div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-primary fw-bold">₹@item.BasePrice</div>
+                                    }
                                     <span class="@(item.IsVeg ? "veg-badge" : "nonveg-badge")" style="transform: scale(0.8);"></span>
                                 </button>
                             </div>
@@ -107,6 +136,18 @@ else
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="posSizeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="posSizeTitle">Choose size</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="posSizeBody"></div>
             </div>
         </div>
     </div>

@@ -41,9 +41,29 @@
                                 <label class="form-label">Name *</label>
                                 <input type="text" name="name" class="form-control" required />
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-4 mb-3" id="singlePriceWrap">
                                 <label class="form-label">Price (₹) *</label>
-                                <input type="number" name="basePrice" class="form-control" step="0.01" required />
+                                <input type="number" name="basePrice" id="basePrice" class="form-control" step="0.01" required />
+                            </div>
+                        </div>
+
+                        <div class="card border mb-3">
+                            <div class="card-body">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="enableHalfFull" name="enableHalfFull" value="true">
+                                    <label class="form-check-label fw-medium" for="enableHalfFull">Offer Half &amp; Full sizes</label>
+                                </div>
+                                <p class="small text-muted mb-3 mb-md-2">One menu card — customers choose Half or Full when adding to cart.</p>
+                                <div class="row g-3 d-none" id="halfFullPriceWrap">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Half price (₹) *</label>
+                                        <input type="number" name="halfPrice" id="halfPrice" class="form-control" step="0.01" min="0.01" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Full price (₹) *</label>
+                                        <input type="number" name="fullPrice" id="fullPrice" class="form-control" step="0.01" min="0.01" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -113,3 +133,28 @@
         }
     </div>
 </div>
+
+@section Scripts {
+<script>
+(() => {
+    const toggle = document.getElementById('enableHalfFull');
+    const singleWrap = document.getElementById('singlePriceWrap');
+    const halfFullWrap = document.getElementById('halfFullPriceWrap');
+    const basePrice = document.getElementById('basePrice');
+    const halfPrice = document.getElementById('halfPrice');
+    const fullPrice = document.getElementById('fullPrice');
+    function sync() {
+        const on = toggle.checked;
+        halfFullWrap.classList.toggle('d-none', !on);
+        singleWrap.classList.toggle('d-none', on);
+        basePrice.required = !on;
+        halfPrice.required = on;
+        fullPrice.required = on;
+        if (on && !basePrice.value && halfPrice.value) basePrice.value = halfPrice.value;
+    }
+    toggle.addEventListener('change', sync);
+    halfPrice.addEventListener('input', () => { if (toggle.checked) basePrice.value = halfPrice.value || '0'; });
+    sync();
+})();
+</script>
+}

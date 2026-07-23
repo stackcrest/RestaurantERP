@@ -142,7 +142,8 @@ public class MenuController : Controller
     [RequestSizeLimit(10 * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 10 * 1024 * 1024)]
     public async Task<IActionResult> Create(string name, string? description, decimal basePrice, Guid categoryId,
-        bool isVeg, string spiceLevel, bool isFeatured, int preparationTime, string? imageUrl, IFormFile? imageFile)
+        bool isVeg, string spiceLevel, bool isFeatured, int preparationTime, string? imageUrl, IFormFile? imageFile,
+        bool enableHalfFull = false, decimal? halfPrice = null, decimal? fullPrice = null)
     {
         if (!await _context.Categories.AnyAsync(c => c.IsActive && !c.IsDeleted))
         {
@@ -154,6 +155,17 @@ public class MenuController : Controller
         {
             TempData["Error"] = "Please select a category.";
             return RedirectToAction("Create");
+        }
+
+        if (enableHalfFull)
+        {
+            var sizeError = ValidateHalfFullPrices(halfPrice, fullPrice);
+            if (sizeError != null)
+            {
+                TempData["Error"] = sizeError;
+                return RedirectToAction("Create");
+            }
+            basePrice = halfPrice!.Value;
         }
 
         var resolvedImage = await ResolveImageAsync(imageFile, imageUrl);
@@ -179,14 +191,25 @@ public class MenuController : Controller
         };
         _context.MenuItems.Add(item);
         await _context.SaveChangesAsync();
+        await SyncHalfFullVariantsAsync(item, enableHalfFull, halfPrice, fullPrice);
+        await _context.SaveChangesAsync();
         TempData["Success"] = "Menu item created successfully!";
         return RedirectToAction("Index");
     }
 
     public async Task<IActionResult> Edit(Guid id, int page = 1, Guid? categoryId = null, string? search = null)
     {
-        var item = await _context.MenuItems.FindAsync(id);
-        if (item == null || item.IsDeleted) return NotFound();
+        var item = await _context.MenuItems
+            .Include(m => m.Variants)
+            .FirstOrDefaultAsync(m => m.Id == id && !m.IsDeleted);
+        if (item == null) return NotFound();
+
+        var half = item.Variants.FirstOrDefault(v => v.IsActive && v.Name.Equals("Half", StringComparison.OrdinalIgnoreCase));
+        var full = item.Variants.FirstOrDefault(v => v.IsActive && v.Name.Equals("Full", StringComparison.OrdinalIgnoreCase));
+        ViewBag.EnableHalfFull = half != null && full != null;
+        ViewBag.HalfPrice = half != null ? item.BasePrice + half.PriceAdjustment : (decimal?)null;
+        ViewBag.FullPrice = full != null ? item.BasePrice + full.PriceAdjustment : (decimal?)null;
+
         ViewBag.Categories = await _context.Categories.Where(c => c.IsActive && !c.IsDeleted).ToListAsync();
         ViewBag.ReturnPage = page < 1 ? 1 : page;
         ViewBag.ReturnCategoryId = categoryId;
@@ -201,10 +224,24 @@ public class MenuController : Controller
     public async Task<IActionResult> Edit(Guid id, string name, string? description, decimal basePrice, Guid categoryId,
         bool isVeg, string spiceLevel, bool isFeatured, bool isAvailable, int preparationTime,
         string? imageUrl, IFormFile? imageFile,
-        int returnPage = 1, Guid? returnCategoryId = null, string? returnSearch = null)
+        int returnPage = 1, Guid? returnCategoryId = null, string? returnSearch = null,
+        bool enableHalfFull = false, decimal? halfPrice = null, decimal? fullPrice = null)
     {
-        var item = await _context.MenuItems.FindAsync(id);
-        if (item == null || item.IsDeleted) return NotFound();
+        var item = await _context.MenuItems
+            .Include(m => m.Variants)
+            .FirstOrDefaultAsync(m => m.Id == id && !m.IsDeleted);
+        if (item == null) return NotFound();
+
+        if (enableHalfFull)
+        {
+            var sizeError = ValidateHalfFullPrices(halfPrice, fullPrice);
+            if (sizeError != null)
+            {
+                TempData["Error"] = sizeError;
+                return RedirectToAction("Edit", BuildEditRoute(id, returnPage, returnCategoryId, returnSearch));
+            }
+            basePrice = halfPrice!.Value;
+        }
 
         var resolvedImage = await ResolveImageAsync(imageFile, imageUrl, item.ImageUrl);
         if (resolvedImage.Error != null)
@@ -228,6 +265,7 @@ public class MenuController : Controller
         item.ThumbnailUrl = resolvedImage.Url;
         item.UpdatedAt = DateTime.UtcNow;
 
+        await SyncHalfFullVariantsAsync(item, enableHalfFull, halfPrice, fullPrice);
         await _context.SaveChangesAsync();
 
         if (!string.IsNullOrEmpty(previousImage)
@@ -283,6 +321,74 @@ public class MenuController : Controller
         if (categoryId.HasValue) route["categoryId"] = categoryId.Value;
         if (!string.IsNullOrWhiteSpace(search)) route["search"] = search.Trim();
         return route;
+    }
+
+    private static string? ValidateHalfFullPrices(decimal? halfPrice, decimal? fullPrice)
+    {
+        if (!halfPrice.HasValue || halfPrice.Value <= 0)
+            return "Enter a valid Half price.";
+        if (!fullPrice.HasValue || fullPrice.Value <= 0)
+            return "Enter a valid Full price.";
+        if (fullPrice.Value < halfPrice.Value)
+            return "Full price must be greater than or equal to Half price.";
+        return null;
+    }
+
+    private async Task SyncHalfFullVariantsAsync(MenuItem item, bool enableHalfFull, decimal? halfPrice, decimal? fullPrice)
+    {
+        var variants = item.Variants?.ToList()
+            ?? await _context.MenuItemVariants.Where(v => v.MenuItemId == item.Id).ToListAsync();
+
+        var half = variants.FirstOrDefault(v => v.Name.Equals("Half", StringComparison.OrdinalIgnoreCase));
+        var full = variants.FirstOrDefault(v => v.Name.Equals("Full", StringComparison.OrdinalIgnoreCase));
+
+        if (!enableHalfFull)
+        {
+            if (half != null) { half.IsActive = false; half.UpdatedAt = DateTime.UtcNow; }
+            if (full != null) { full.IsActive = false; full.UpdatedAt = DateTime.UtcNow; }
+            return;
+        }
+
+        item.BasePrice = halfPrice!.Value;
+        var fullAdj = fullPrice!.Value - halfPrice.Value;
+
+        if (half == null)
+        {
+            _context.MenuItemVariants.Add(new MenuItemVariant
+            {
+                MenuItemId = item.Id,
+                Name = "Half",
+                PriceAdjustment = 0,
+                IsDefault = true,
+                IsActive = true
+            });
+        }
+        else
+        {
+            half.PriceAdjustment = 0;
+            half.IsDefault = true;
+            half.IsActive = true;
+            half.UpdatedAt = DateTime.UtcNow;
+        }
+
+        if (full == null)
+        {
+            _context.MenuItemVariants.Add(new MenuItemVariant
+            {
+                MenuItemId = item.Id,
+                Name = "Full",
+                PriceAdjustment = fullAdj,
+                IsDefault = false,
+                IsActive = true
+            });
+        }
+        else
+        {
+            full.PriceAdjustment = fullAdj;
+            full.IsDefault = false;
+            full.IsActive = true;
+            full.UpdatedAt = DateTime.UtcNow;
+        }
     }
 
     private async Task<(string? Url, string? Error)> ResolveImageAsync(
