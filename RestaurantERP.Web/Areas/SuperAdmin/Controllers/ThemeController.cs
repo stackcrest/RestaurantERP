@@ -40,8 +40,15 @@ public class ThemeController : Controller
     [RequestSizeLimit(10 * 1024 * 1024)]
     [RequestFormLimits(MultipartBodyLengthLimit = 10 * 1024 * 1024)]
     public async Task<IActionResult> Save(
-        string restaurantName, string tagline, string primaryColor,
-        string secondaryColor, string accentColor, string surfaceColor,
+        string restaurantName, string tagline,
+        string primaryColor, string secondaryColor, string accentColor,
+        string backgroundColor, string surfaceColor,
+        string textPrimary, string textSecondary,
+        string fontFamily, string headingFontFamily,
+        string borderRadius, string buttonStyle,
+        string shadowIntensity, string motionStyle,
+        string colorGrade, string heroStyle,
+        bool enableAnimations, bool darkMode,
         string? logoUrl, string? faviconUrl,
         IFormFile? logoFile, IFormFile? faviconFile)
     {
@@ -68,44 +75,51 @@ public class ThemeController : Controller
                 return RedirectToAction(nameof(Index));
             }
 
-            // Update the latest row in place so the admin page always reloads the saved photos immediately.
+            void Apply(ThemeSetting t)
+            {
+                t.RestaurantName = restaurantName?.Trim();
+                t.Tagline = tagline?.Trim();
+                t.PrimaryColor = NormalizeColor(primaryColor, "#E63946");
+                t.SecondaryColor = NormalizeColor(secondaryColor, "#1D3557");
+                t.AccentColor = NormalizeColor(accentColor, "#F4A261");
+                t.BackgroundColor = NormalizeColor(backgroundColor, "#FFFFFF");
+                t.SurfaceColor = NormalizeColor(surfaceColor, "#F8F9FA");
+                t.TextPrimary = NormalizeColor(textPrimary, "#212529");
+                t.TextSecondary = NormalizeColor(textSecondary, "#6C757D");
+                t.FontFamily = string.IsNullOrWhiteSpace(fontFamily)
+                    ? "'Source Sans 3', system-ui, sans-serif"
+                    : fontFamily.Trim();
+                t.HeadingFontFamily = string.IsNullOrWhiteSpace(headingFontFamily)
+                    ? "'Cormorant Garamond', Georgia, serif"
+                    : headingFontFamily.Trim();
+                t.BorderRadius = string.IsNullOrWhiteSpace(borderRadius) ? "12px" : borderRadius.Trim();
+                t.ButtonStyle = NormalizeOption(buttonStyle, "rounded", "rounded", "soft", "pill", "square");
+                t.ShadowIntensity = NormalizeOption(shadowIntensity, "medium", "none", "soft", "medium", "strong");
+                t.MotionStyle = NormalizeOption(motionStyle, "subtle", "none", "subtle", "smooth", "lively");
+                t.ColorGrade = NormalizeOption(colorGrade, "none", "none", "warm", "cool", "vintage", "vibrant");
+                t.HeroStyle = NormalizeOption(heroStyle, "gradient", "gradient", "solid", "soft-glow");
+                t.EnableAnimations = enableAnimations;
+                t.DarkMode = darkMode;
+                t.LogoUrl = resolvedLogo.Url;
+                t.FaviconUrl = resolvedFavicon.Url;
+                t.Version = newVersion;
+                t.IsPublished = true;
+                t.UpdatedAt = DateTime.UtcNow;
+            }
+
             if (existing != null)
             {
-                existing.RestaurantName = restaurantName?.Trim();
-                existing.Tagline = tagline?.Trim();
-                existing.PrimaryColor = primaryColor;
-                existing.SecondaryColor = secondaryColor;
-                existing.AccentColor = accentColor;
-                existing.SurfaceColor = surfaceColor;
-                existing.LogoUrl = resolvedLogo.Url;
-                existing.FaviconUrl = resolvedFavicon.Url;
-                existing.Version = newVersion;
-                existing.IsPublished = true;
-                existing.UpdatedAt = DateTime.UtcNow;
+                Apply(existing);
             }
             else
             {
-                _context.ThemeSettings.Add(new ThemeSetting
-                {
-                    RestaurantName = restaurantName?.Trim(),
-                    Tagline = tagline?.Trim(),
-                    PrimaryColor = primaryColor,
-                    SecondaryColor = secondaryColor,
-                    AccentColor = accentColor,
-                    SurfaceColor = surfaceColor,
-                    LogoUrl = resolvedLogo.Url,
-                    FaviconUrl = resolvedFavicon.Url,
-                    Version = newVersion,
-                    IsPublished = true
-                });
+                var theme = new ThemeSetting();
+                Apply(theme);
+                _context.ThemeSettings.Add(theme);
             }
 
             await _context.SaveChangesAsync();
-
-            TempData["Success"] = string.IsNullOrEmpty(resolvedLogo.Url) && logoFile == null
-                ? "Theme saved and published!"
-                : "Theme saved! Logo/favicon updated.";
-
+            TempData["Success"] = "UI theme published. Open the public site to see colors, fonts, and effects.";
             return RedirectToAction(nameof(Index));
         }
         catch (Exception ex)
@@ -116,10 +130,18 @@ public class ThemeController : Controller
         }
     }
 
+    private static string NormalizeColor(string? value, string fallback) =>
+        string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+
+    private static string NormalizeOption(string? value, string fallback, params string[] allowed)
+    {
+        var v = (value ?? "").Trim().ToLowerInvariant();
+        return allowed.Contains(v) ? v : fallback;
+    }
+
     private async Task<(string? Url, string? Error)> ResolveMediaAsync(
         IFormFile? file, string? url, string? currentUrl)
     {
-        // Prefer newly uploaded file over URL text.
         if (file != null && file.Length > 0)
             return await _uploads.SaveImageAsync(file, "theme");
 

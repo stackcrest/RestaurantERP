@@ -27,16 +27,26 @@
 </section>
 
 <!-- Features Section -->
-<section class="py-5 bg-light">
+<section class="py-5 home-features-section">
     <div class="container">
         <div class="row g-4 text-center">
             @for (var i = 1; i <= 3; i++)
             {
+                var featureImage = AppContent.Get($"home.features.{i}.image");
+                var featureIcon = AppContent.Get($"home.features.{i}.icon", "bi-star");
                 <div class="col-md-4">
-                    <div class="p-4">
-                        <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
-                            <i class="bi @AppContent.Get($"home.features.{i}.icon") text-primary fs-2"></i>
-                        </div>
+                    <div class="p-4 home-feature-card h-100">
+                        @if (!string.IsNullOrWhiteSpace(featureImage))
+                        {
+                            <img src="@featureImage" alt="@AppContent.Get($"home.features.{i}.title")"
+                                 class="home-feature-image mb-3" />
+                        }
+                        else
+                        {
+                            <div class="home-feature-icon-wrap mb-3">
+                                <i class="bi @featureIcon"></i>
+                            </div>
+                        }
                         <h5 class="fw-bold">@AppContent.Get($"home.features.{i}.title")</h5>
                         <p class="text-muted mb-0">@AppContent.Get($"home.features.{i}.body")</p>
                     </div>
@@ -45,6 +55,43 @@
         </div>
     </div>
 </section>
+
+@section Styles {
+<style>
+    .home-features-section {
+        background: linear-gradient(180deg, #f7f4ef 0%, #f0ebe3 100%);
+    }
+    .home-feature-card {
+        border-radius: 16px;
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .home-feature-card:hover {
+        transform: translateY(-3px);
+    }
+    .home-feature-image {
+        width: 88px;
+        height: 88px;
+        object-fit: cover;
+        border-radius: 50%;
+        display: inline-block;
+        box-shadow: 0 8px 24px rgba(29, 53, 87, 0.14);
+        border: 3px solid #fff;
+    }
+    .home-feature-icon-wrap {
+        width: 88px;
+        height: 88px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(145deg, #fff 0%, #f3e9df 100%);
+        border: 1px solid rgba(29, 53, 87, 0.08);
+        box-shadow: 0 8px 20px rgba(29, 53, 87, 0.08);
+        color: var(--secondary, #1D3557);
+        font-size: 2rem;
+    }
+</style>
+}
 
 <!-- Categories Section -->
 <section class="py-5">

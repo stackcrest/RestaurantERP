@@ -1,14 +1,14 @@
 /* Classic professional site chrome — loaded by _Layout */
 
 body {
-    font-family: 'Source Sans 3', system-ui, sans-serif;
+    font-family: var(--font-body, 'Source Sans 3', system-ui, sans-serif);
 }
 
 .brand-font,
 .hero h1,
 .section-title,
 .site-navbar .navbar-brand {
-    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-family: var(--font-heading, 'Cormorant Garamond', Georgia, serif);
 }
 
 .site-topbar {

@@ -1,6 +1,10 @@
 @model RestaurantERP.Domain.Entities.ThemeSetting
+@using RestaurantERP.Application.Common
 @{
-    ViewData["Title"] = "Theme Management";
+    ViewData["Title"] = "UI Theme Designer";
+    var bodyFonts = ThemeUiCatalog.BodyFonts;
+    var headingFonts = ThemeUiCatalog.HeadingFonts;
+    var presets = ThemeUiCatalog.Presets;
 }
 
 @if (TempData["Success"] != null)
@@ -12,124 +16,453 @@
     <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
-<div class="row">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header bg-white">
-                <h6 class="mb-0 fw-bold">Brand Settings</h6>
-            </div>
-            <div class="card-body">
-                <form asp-action="Save" method="post" enctype="multipart/form-data" novalidate>
-                    @Html.AntiForgeryToken()
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Restaurant Name</label>
-                            <input type="text" name="restaurantName" class="form-control" value="@Model.RestaurantName" required />
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Tagline</label>
-                            <input type="text" name="tagline" class="form-control" value="@Model.Tagline" />
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Logo</label>
-                            @if (!string.IsNullOrEmpty(Model.LogoUrl))
-                            {
-                                <div class="mb-2">
-                                    <img src="@(Model.LogoUrl)?v=@Model.Version" alt="Logo" class="rounded border bg-white p-1" style="max-height: 72px; object-fit: contain;" />
-                                </div>
-                            }
-                            <input type="file" name="logoFile" class="form-control mb-2" accept="image/jpeg,image/png,image/webp,image/gif" />
-                            <input type="text" name="logoUrl" class="form-control" value="@Model.LogoUrl" placeholder="@AppContent.Get("placeholder.image_url", "https://... or /images/...")" />
-                            <div class="form-text">Upload GIF/PNG/JPG/WEBP, or paste a path/URL if no file is available</div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Favicon</label>
-                            @if (!string.IsNullOrEmpty(Model.FaviconUrl))
-                            {
-                                <div class="mb-2">
-                                    <img src="@(Model.FaviconUrl)?v=@Model.Version" alt="Favicon" class="rounded border bg-white p-1" style="max-height: 48px; object-fit: contain;" />
-                                </div>
-                            }
-                            <input type="file" name="faviconFile" class="form-control mb-2" accept="image/jpeg,image/png,image/webp,image/gif,image/x-icon" />
-                            <input type="text" name="faviconUrl" class="form-control" value="@Model.FaviconUrl" placeholder="@AppContent.Get("placeholder.image_url", "https://... or /images/...")" />
-                        </div>
-                    </div>
-
-                    <hr class="my-4">
-                    <h6 class="fw-bold mb-3">Color Palette</h6>
-
-                    <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Primary Color</label>
-                            <div class="input-group">
-                                <input type="color" class="form-control form-control-color" value="@(Model.PrimaryColor ?? "#E63946")" 
-                                       onchange="document.getElementById('primaryHex').value = this.value">
-                                <input type="text" id="primaryHex" name="primaryColor" class="form-control" value="@(Model.PrimaryColor ?? "#E63946")" />
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Secondary Color</label>
-                            <div class="input-group">
-                                <input type="color" class="form-control form-control-color" value="@(Model.SecondaryColor ?? "#1D3557")"
-                                       onchange="document.getElementById('secondaryHex').value = this.value">
-                                <input type="text" id="secondaryHex" name="secondaryColor" class="form-control" value="@(Model.SecondaryColor ?? "#1D3557")" />
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Accent Color</label>
-                            <div class="input-group">
-                                <input type="color" class="form-control form-control-color" value="@(Model.AccentColor ?? "#F4A261")"
-                                       onchange="document.getElementById('accentHex').value = this.value">
-                                <input type="text" id="accentHex" name="accentColor" class="form-control" value="@(Model.AccentColor ?? "#F4A261")" />
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label">Surface Color</label>
-                            <div class="input-group">
-                                <input type="color" class="form-control form-control-color" value="@(Model.SurfaceColor ?? "#F8F9FA")"
-                                       onchange="document.getElementById('surfaceHex').value = this.value">
-                                <input type="text" id="surfaceHex" name="surfaceColor" class="form-control" value="@(Model.SurfaceColor ?? "#F8F9FA")" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary mt-3">
-                        <i class="bi bi-check me-1"></i> Save & Publish
-                    </button>
-                </form>
-            </div>
-        </div>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h5 class="mb-0 fw-bold">UI Theme Designer</h5>
+        <small class="text-muted">Color grading, typography, shadows, motion — publish once for the whole customer site.</small>
     </div>
+    <span class="badge text-bg-light border">v@(Model.Version)</span>
+</div>
 
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header bg-white">
-                <h6 class="mb-0 fw-bold">Preview</h6>
-            </div>
-            <div class="card-body">
-                <div class="border rounded p-3" style="background: @(Model.SurfaceColor ?? "#F8F9FA");">
-                    <div class="p-3 rounded text-white text-center mb-3" style="background: linear-gradient(135deg, @(Model.SecondaryColor ?? "#1D3557"), @(Model.PrimaryColor ?? "#E63946"));">
-                        @if (!string.IsNullOrEmpty(Model.LogoUrl))
-                        {
-                            <img src="@(Model.LogoUrl)?v=@Model.Version" alt="Logo" class="mb-2" style="max-height: 48px; object-fit: contain;" />
-                        }
-                        <h6 class="mb-1">@(Model.RestaurantName ?? "Restaurant Name")</h6>
-                        <small>@(Model.Tagline ?? "Your tagline here")</small>
-                    </div>
-                    <button class="btn w-100 text-white" style="background: @(Model.PrimaryColor ?? "#E63946");">Order Now</button>
-                    <div class="mt-3 p-2 bg-white rounded">
-                        <small class="text-muted">Menu Item</small>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span>Butter Chicken</span>
-                            <span class="fw-bold" style="color: @(Model.PrimaryColor ?? "#E63946");">₹320</span>
+<form asp-action="Save" method="post" enctype="multipart/form-data" id="themeDesignerForm" novalidate>
+    @Html.AntiForgeryToken()
+    <div class="row g-3">
+        <div class="col-xl-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom-0 pt-3">
+                    <ul class="nav nav-pills gap-1 flex-wrap" id="themeTabs" role="tablist">
+                        <li class="nav-item"><button type="button" class="nav-link active" data-bs-toggle="pill" data-bs-target="#tabBrand">Brand</button></li>
+                        <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#tabColors">Colors</button></li>
+                        <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#tabType">Typography</button></li>
+                        <li class="nav-item"><button type="button" class="nav-link" data-bs-toggle="pill" data-bs-target="#tabEffects">Effects</button></li>
+                    </ul>
+                </div>
+                <div class="card-body pt-2">
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="tabBrand">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Classic presets</label>
+                                <div class="d-flex flex-wrap gap-2" id="presetRow">
+                                    @foreach (var p in presets)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-secondary theme-preset"
+                                                data-primary="@p.Primary" data-secondary="@p.Secondary" data-accent="@p.Accent"
+                                                data-bg="@p.Background" data-surface="@p.Surface"
+                                                data-text="@p.TextPrimary" data-muted="@p.TextSecondary"
+                                                data-grade="@p.ColorGrade" data-hero="@p.HeroStyle"
+                                                title="@p.Label">
+                                            <span class="d-inline-flex align-items-center gap-1">
+                                                <span class="rounded-circle border" style="width:14px;height:14px;background:@p.Primary"></span>
+                                                <span class="rounded-circle border" style="width:14px;height:14px;background:@p.Secondary"></span>
+                                                @p.Label
+                                            </span>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Restaurant Name</label>
+                                    <input type="text" name="restaurantName" id="restaurantName" class="form-control" value="@Model.RestaurantName" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Tagline</label>
+                                    <input type="text" name="tagline" id="tagline" class="form-control" value="@Model.Tagline" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Logo</label>
+                                    @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                                    {
+                                        <div class="mb-2">
+                                            <img src="@(Model.LogoUrl)?v=@Model.Version" alt="Logo" class="rounded border bg-white p-1" style="max-height: 72px; object-fit: contain;" />
+                                        </div>
+                                    }
+                                    <input type="file" name="logoFile" class="form-control mb-2" accept="image/jpeg,image/png,image/webp,image/gif" />
+                                    <input type="text" name="logoUrl" class="form-control" value="@Model.LogoUrl" placeholder="Or paste image URL / path" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Favicon</label>
+                                    @if (!string.IsNullOrEmpty(Model.FaviconUrl))
+                                    {
+                                        <div class="mb-2">
+                                            <img src="@(Model.FaviconUrl)?v=@Model.Version" alt="Favicon" class="rounded border bg-white p-1" style="max-height: 48px; object-fit: contain;" />
+                                        </div>
+                                    }
+                                    <input type="file" name="faviconFile" class="form-control mb-2" accept="image/jpeg,image/png,image/webp,image/gif,image/x-icon" />
+                                    <input type="text" name="faviconUrl" class="form-control" value="@Model.FaviconUrl" placeholder="Or paste favicon URL / path" />
+                                </div>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="darkMode" value="true" id="darkMode" @(Model.DarkMode ? "checked" : "") />
+                                <label class="form-check-label" for="darkMode">Dark mode base (uses darker surfaces on the public site)</label>
+                            </div>
                         </div>
+
+                        <div class="tab-pane fade" id="tabColors">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Primary</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color theme-color-picker" data-target="primaryColor" value="@(Model.PrimaryColor ?? "#E63946")" />
+                                        <input type="text" id="primaryColor" name="primaryColor" class="form-control theme-live" value="@(Model.PrimaryColor ?? "#E63946")" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Secondary</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color theme-color-picker" data-target="secondaryColor" value="@(Model.SecondaryColor ?? "#1D3557")" />
+                                        <input type="text" id="secondaryColor" name="secondaryColor" class="form-control theme-live" value="@(Model.SecondaryColor ?? "#1D3557")" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Accent</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color theme-color-picker" data-target="accentColor" value="@(Model.AccentColor ?? "#F4A261")" />
+                                        <input type="text" id="accentColor" name="accentColor" class="form-control theme-live" value="@(Model.AccentColor ?? "#F4A261")" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Background</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color theme-color-picker" data-target="backgroundColor" value="@(Model.BackgroundColor ?? "#FFFFFF")" />
+                                        <input type="text" id="backgroundColor" name="backgroundColor" class="form-control theme-live" value="@(Model.BackgroundColor ?? "#FFFFFF")" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Surface</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color theme-color-picker" data-target="surfaceColor" value="@(Model.SurfaceColor ?? "#F8F9FA")" />
+                                        <input type="text" id="surfaceColor" name="surfaceColor" class="form-control theme-live" value="@(Model.SurfaceColor ?? "#F8F9FA")" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Text</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color theme-color-picker" data-target="textPrimary" value="@(Model.TextPrimary ?? "#212529")" />
+                                        <input type="text" id="textPrimary" name="textPrimary" class="form-control theme-live" value="@(Model.TextPrimary ?? "#212529")" />
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Muted text</label>
+                                    <div class="input-group">
+                                        <input type="color" class="form-control form-control-color theme-color-picker" data-target="textSecondary" value="@(Model.TextSecondary ?? "#6C757D")" />
+                                        <input type="text" id="textSecondary" name="textSecondary" class="form-control theme-live" value="@(Model.TextSecondary ?? "#6C757D")" />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <label class="form-label fw-semibold">Color grade</label>
+                                <div class="btn-group flex-wrap" role="group">
+                                    @foreach (var g in new[] { ("none", "None"), ("warm", "Warm"), ("cool", "Cool"), ("vintage", "Vintage"), ("vibrant", "Vibrant") })
+                                    {
+                                        <input type="radio" class="btn-check theme-live" name="colorGrade" id="grade_@g.Item1" value="@g.Item1" autocomplete="off"
+                                               @(string.Equals(Model.ColorGrade, g.Item1, StringComparison.OrdinalIgnoreCase) || (string.IsNullOrEmpty(Model.ColorGrade) && g.Item1 == "none") ? "checked" : "") />
+                                        <label class="btn btn-outline-secondary" for="grade_@g.Item1">@g.Item2</label>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="tabType">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Body font</label>
+                                    <select name="fontFamily" id="fontFamily" class="form-select theme-live">
+                                        @foreach (var f in bodyFonts)
+                                        {
+                                            var selected = string.Equals(Model.FontFamily, f.CssStack, StringComparison.OrdinalIgnoreCase)
+                                                || ((string.IsNullOrEmpty(Model.FontFamily) || Model.FontFamily.Contains("Inter", StringComparison.OrdinalIgnoreCase)) && f.Id == "source-sans");
+                                            if (selected)
+                                            {
+                                                <option value="@f.CssStack" selected>@f.Label</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@f.CssStack">@f.Label</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Heading font</label>
+                                    <select name="headingFontFamily" id="headingFontFamily" class="form-select theme-live">
+                                        @foreach (var f in headingFonts.Where(x => x.Id != "match-body"))
+                                        {
+                                            var selected = string.Equals(Model.HeadingFontFamily, f.CssStack, StringComparison.OrdinalIgnoreCase)
+                                                || (string.IsNullOrEmpty(Model.HeadingFontFamily) && f.Id == "cormorant");
+                                            if (selected)
+                                            {
+                                                <option value="@f.CssStack" selected>@f.Label</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="@f.CssStack">@f.Label</option>
+                                            }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Corner radius</label>
+                                    <select name="borderRadius" id="borderRadius" class="form-select theme-live">
+                                        @foreach (var r in new[] { ("6px", "Sharp"), ("10px", "Soft"), ("12px", "Classic"), ("16px", "Rounded"), ("20px", "Plush") })
+                                        {
+                                            var selected = Model.BorderRadius == r.Item1 || (string.IsNullOrEmpty(Model.BorderRadius) && r.Item1 == "12px");
+                                            if (selected) { <option value="@r.Item1" selected>@r.Item2 (@r.Item1)</option> }
+                                            else { <option value="@r.Item1">@r.Item2 (@r.Item1)</option> }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Button style</label>
+                                    <select name="buttonStyle" id="buttonStyle" class="form-select theme-live">
+                                        @foreach (var s in new[] { ("rounded", "Rounded"), ("soft", "Soft"), ("pill", "Pill"), ("square", "Square") })
+                                        {
+                                            var selected = string.Equals(Model.ButtonStyle, s.Item1, StringComparison.OrdinalIgnoreCase) || (string.IsNullOrEmpty(Model.ButtonStyle) && s.Item1 == "rounded");
+                                            if (selected) { <option value="@s.Item1" selected>@s.Item2</option> }
+                                            else { <option value="@s.Item1">@s.Item2</option> }
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane fade" id="tabEffects">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Shadow depth</label>
+                                    <select name="shadowIntensity" id="shadowIntensity" class="form-select theme-live">
+                                        @foreach (var s in new[] { ("none", "Flat"), ("soft", "Soft"), ("medium", "Medium"), ("strong", "Dramatic") })
+                                        {
+                                            var selected = string.Equals(Model.ShadowIntensity, s.Item1, StringComparison.OrdinalIgnoreCase) || (string.IsNullOrEmpty(Model.ShadowIntensity) && s.Item1 == "medium");
+                                            if (selected) { <option value="@s.Item1" selected>@s.Item2</option> }
+                                            else { <option value="@s.Item1">@s.Item2</option> }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Motion / animation</label>
+                                    <select name="motionStyle" id="motionStyle" class="form-select theme-live">
+                                        @foreach (var s in new[] { ("none", "Off"), ("subtle", "Subtle"), ("smooth", "Smooth"), ("lively", "Lively") })
+                                        {
+                                            var selected = string.Equals(Model.MotionStyle, s.Item1, StringComparison.OrdinalIgnoreCase) || (string.IsNullOrEmpty(Model.MotionStyle) && s.Item1 == "subtle");
+                                            if (selected) { <option value="@s.Item1" selected>@s.Item2</option> }
+                                            else { <option value="@s.Item1">@s.Item2</option> }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Hero treatment</label>
+                                    <select name="heroStyle" id="heroStyle" class="form-select theme-live">
+                                        @foreach (var s in new[] { ("gradient", "Gradient"), ("solid", "Solid"), ("soft-glow", "Soft glow") })
+                                        {
+                                            var selected = string.Equals(Model.HeroStyle, s.Item1, StringComparison.OrdinalIgnoreCase) || (string.IsNullOrEmpty(Model.HeroStyle) && s.Item1 == "gradient");
+                                            if (selected) { <option value="@s.Item1" selected>@s.Item2</option> }
+                                            else { <option value="@s.Item1">@s.Item2</option> }
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3 d-flex align-items-end">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input theme-live" type="checkbox" name="enableAnimations" value="true" id="enableAnimations" @(Model.EnableAnimations ? "checked" : "") />
+                                        <label class="form-check-label" for="enableAnimations">Enable UI animations on the public site</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-muted small mb-0">Effects apply site-wide after Save &amp; Publish (cards, hero, buttons, hover motion).</p>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4 pt-3 border-top">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check2-circle me-1"></i> Save &amp; Publish
+                        </button>
+                        <a href="/" target="_blank" class="btn btn-outline-secondary">Preview live site</a>
                     </div>
                 </div>
-                <small class="text-muted d-block mt-2">Version: @Model.Version</small>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card border-0 shadow-sm sticky-top" style="top: 1rem;">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0 fw-bold">Live preview</h6>
+                </div>
+                <div class="card-body" id="themePreviewShell">
+                    <div id="themePreview" class="theme-preview-frame border overflow-hidden">
+                        <div class="preview-hero text-white p-3">
+                            <div class="small opacity-75 mb-1" id="pvTagline">@(Model.Tagline ?? "Your tagline")</div>
+                            <div class="fs-5 fw-bold" id="pvName" style="font-family: var(--pv-heading);">@(Model.RestaurantName ?? "Restaurant")</div>
+                            <button type="button" class="btn btn-sm mt-2 text-white preview-btn" id="pvCta">Order Now</button>
+                        </div>
+                        <div class="p-3 preview-body">
+                            <div class="preview-card p-3 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-semibold">Butter Chicken</span>
+                                    <span class="fw-bold preview-price">₹320</span>
+                                </div>
+                                <small class="preview-muted">Creamy tomato gravy · Full</small>
+                            </div>
+                            <div class="preview-card p-3">
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-semibold">Paneer Tikka</span>
+                                    <span class="fw-bold preview-price">₹260</span>
+                                </div>
+                                <small class="preview-muted">Smoky · Charred peppers</small>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted d-block mt-2">Changes update instantly here. Publish to apply on the customer site.</small>
+                </div>
             </div>
         </div>
     </div>
-</div>
+</form>
+
+<style>
+    .theme-preview-frame {
+        border-radius: var(--pv-radius, 12px);
+        background: var(--pv-bg, #fff);
+        color: var(--pv-text, #212529);
+        font-family: var(--pv-body, system-ui);
+        filter: var(--pv-grade, none);
+        box-shadow: var(--pv-shadow-md, 0 8px 22px rgba(0,0,0,.1));
+        transition: transform .25s ease, box-shadow .25s ease;
+    }
+    .theme-preview-frame.anim-on:hover {
+        transform: translateY(-2px);
+    }
+    .preview-hero {
+        background: var(--pv-hero, linear-gradient(135deg, #1D3557, #E63946));
+        transition: background .25s ease;
+    }
+    .preview-body { background: var(--pv-surface, #F8F9FA); }
+    .preview-card {
+        background: #fff;
+        border-radius: calc(var(--pv-radius, 12px) * .85);
+        box-shadow: var(--pv-shadow-sm, 0 4px 12px rgba(0,0,0,.08));
+        transition: transform .25s ease, box-shadow .25s ease;
+    }
+    .theme-preview-frame.anim-on .preview-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--pv-shadow-lg, 0 14px 32px rgba(0,0,0,.16));
+    }
+    .preview-btn {
+        background: var(--pv-primary, #E63946) !important;
+        border-radius: var(--pv-btn-radius, 12px) !important;
+        border: none;
+    }
+    .preview-price { color: var(--pv-primary, #E63946); }
+    .preview-muted { color: var(--pv-muted, #6C757D); }
+    #pvName { font-family: var(--pv-heading, Georgia, serif); }
+</style>
+
+@section Scripts {
+<script>
+(function () {
+    const shadows = {
+        none: { sm: 'none', md: 'none', lg: 'none' },
+        soft: { sm: '0 2px 8px rgba(15,23,42,.06)', md: '0 6px 16px rgba(15,23,42,.08)', lg: '0 12px 28px rgba(15,23,42,.10)' },
+        medium: { sm: '0 4px 12px rgba(15,23,42,.08)', md: '0 8px 22px rgba(15,23,42,.12)', lg: '0 14px 32px rgba(15,23,42,.16)' },
+        strong: { sm: '0 4px 14px rgba(15,23,42,.14)', md: '0 10px 28px rgba(15,23,42,.18)', lg: '0 18px 40px rgba(15,23,42,.22)' }
+    };
+    const grades = {
+        none: 'none',
+        warm: 'sepia(.12) saturate(1.08) contrast(1.02)',
+        cool: 'saturate(1.05) hue-rotate(8deg) contrast(1.03)',
+        vintage: 'sepia(.22) contrast(1.05) brightness(.98)',
+        vibrant: 'saturate(1.25) contrast(1.06)'
+    };
+
+    function val(id) { return document.getElementById(id)?.value || ''; }
+    function checked(name) {
+        const el = document.querySelector(`input[name="${name}"]:checked`);
+        return el ? el.value : '';
+    }
+    function btnRadius(style, radius) {
+        if (style === 'pill') return '999px';
+        if (style === 'square') return '4px';
+        if (style === 'soft') return '20px';
+        return radius || '12px';
+    }
+    function heroBg(style, secondary, primary) {
+        if (style === 'solid') return secondary;
+        if (style === 'soft-glow') return `radial-gradient(circle at 30% 20%, ${primary}55, transparent 45%), linear-gradient(160deg, ${secondary}, ${primary})`;
+        return `linear-gradient(135deg, ${secondary} 0%, ${primary} 100%)`;
+    }
+
+    function refresh() {
+        const frame = document.getElementById('themePreview');
+        if (!frame) return;
+        const primary = val('primaryColor');
+        const secondary = val('secondaryColor');
+        const surface = val('surfaceColor');
+        const bg = val('backgroundColor');
+        const text = val('textPrimary');
+        const muted = val('textSecondary');
+        const radius = val('borderRadius');
+        const buttonStyle = val('buttonStyle');
+        const shadow = shadows[val('shadowIntensity')] || shadows.medium;
+        const grade = grades[checked('colorGrade')] || grades.none;
+        const heroStyle = val('heroStyle');
+        const anim = document.getElementById('enableAnimations')?.checked && val('motionStyle') !== 'none';
+
+        frame.style.setProperty('--pv-primary', primary);
+        frame.style.setProperty('--pv-bg', bg);
+        frame.style.setProperty('--pv-surface', surface);
+        frame.style.setProperty('--pv-text', text);
+        frame.style.setProperty('--pv-muted', muted);
+        frame.style.setProperty('--pv-radius', radius);
+        frame.style.setProperty('--pv-btn-radius', btnRadius(buttonStyle, radius));
+        frame.style.setProperty('--pv-body', val('fontFamily'));
+        frame.style.setProperty('--pv-heading', val('headingFontFamily'));
+        frame.style.setProperty('--pv-shadow-sm', shadow.sm);
+        frame.style.setProperty('--pv-shadow-md', shadow.md);
+        frame.style.setProperty('--pv-shadow-lg', shadow.lg);
+        frame.style.setProperty('--pv-grade', grade);
+        frame.style.setProperty('--pv-hero', heroBg(heroStyle, secondary, primary));
+        frame.classList.toggle('anim-on', !!anim);
+
+        document.getElementById('pvName').textContent = val('restaurantName') || 'Restaurant';
+        document.getElementById('pvTagline').textContent = val('tagline') || 'Your tagline';
+    }
+
+    document.querySelectorAll('.theme-color-picker').forEach(picker => {
+        picker.addEventListener('input', () => {
+            const t = document.getElementById(picker.dataset.target);
+            if (t) { t.value = picker.value; refresh(); }
+        });
+    });
+    document.querySelectorAll('.theme-live, #restaurantName, #tagline').forEach(el => {
+        el.addEventListener('input', refresh);
+        el.addEventListener('change', refresh);
+    });
+    document.querySelectorAll('.theme-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const map = {
+                primaryColor: btn.dataset.primary,
+                secondaryColor: btn.dataset.secondary,
+                accentColor: btn.dataset.accent,
+                backgroundColor: btn.dataset.bg,
+                surfaceColor: btn.dataset.surface,
+                textPrimary: btn.dataset.text,
+                textSecondary: btn.dataset.muted
+            };
+            Object.entries(map).forEach(([id, v]) => {
+                const input = document.getElementById(id);
+                if (input) input.value = v;
+                const picker = document.querySelector(`.theme-color-picker[data-target="${id}"]`);
+                if (picker) picker.value = v;
+            });
+            const grade = document.getElementById('grade_' + btn.dataset.grade);
+            if (grade) grade.checked = true;
+            const hero = document.getElementById('heroStyle');
+            if (hero) hero.value = btn.dataset.hero;
+            refresh();
+        });
+    });
+    refresh();
+})();
+</script>
+}
